@@ -378,3 +378,213 @@ _Verificación de un Smart Contract_
 2. Hacer click en la pestaña `Contract` que te permitirá ver el bytecode generado del Smart Contract. Para verificar, hacer clic en `Verify and Publish`.
 
 ![image-20221002072149755](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002072149755.png)
+
+3. Se abrirá una lista de opciones que tienen que ser llenadas de la siguiente manera: address del smart contract, Single File, versión del compilador (debe ser la misma usada en Remix), MIT de licencia.
+
+![image-20221002072916426](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002072916426.png)
+
+4. En esta ventana copias y pegas el código de Remix. Verificas el CAPTCHA. Luego clic en `Verify and Publish`.
+
+![image-20221002074129280](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002074129280.png)
+
+4. Si todos los valores fueron incluidos correctamente, se verá el siguiente resultado:
+
+![image-20221002073334433](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002073334433.png)
+
+6. Al dirigirte a tu contrato en Goerli.etherscan.io con el siguiente link `https://goerli.etherscan.io/address/0xc5bccf767704432a3a22318a0df3067d9a3fc217`, del cual la última parte será reemplazada por la dirección (address) de tu contrato, podrás (1) encontrar el código del Smart Contract, (2) interactuar con el contrato directamente (`Read Contract` y `Write Contract`) y (3) observar otros detalles del mismo.
+
+![image-20221002073616250](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002073616250.png)
+
+*Hash table en contratos inteligentes*
+
+La estructura de datos llamado mapping es uno de los más usados en Solidity. `mapping(_KeyType => _ValueType)` Es el equivalente a un Hash Table o un objeto (`var obj = {}`) en Javascript. A cada `key` le corresopnde un `value` dentro del mapping.
+
+![image-20221002122245338](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002122245338.png)
+
+`_KeyType` no puede ser otro mapping, struct o array. `_ValueType` puede ser de cualquier tipo, incluyendo mapping, arrays y structs.
+
+Un `mapping` empieza con una inicialización de todos los posibles valores de `_KeyType` que están mapeados a un valor por defecto que es 0. Además, con `mapping` no se lleva la cuenta de los keys cuyos valores sea 0. Ello justamente impide que no se pueda borrar un `mapping` a menos que se sepa el `key`. 
+
+Los `mapping`s solo pueden tener un tipo de ubicación de información: `storage`. No se pueden usar `mapping`s como parámetros de una función o como el valor de retorno. 
+
+Un `mapping` no tiene longitud (`length`), como lo puede tener un array. Un `mapping` tampoco es iterable porque no hay manera de conocer sus `key`s mediante ningún método. Se puede guardar las llaves del `mapping` en otro array para poder iterar luego.
+
+En el siguiente ejemplo se incluye un `mapping` para guardar una lista de saludos en el cual el `_KeyType` se va incrementando en uno a medida que la función `set` es llamada.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.4.16 <0.9.0;
+
+contract MiPrimerContrato {
+    string saludo; // empieza como un string vacío ('') por definición
+
+    uint256 counter; // empieza en zero por definición
+    mapping(uint256 => string) listaSaludos;
+
+    function set(string memory _nuevoSaludo) public {
+        saludo = _nuevoSaludo;
+
+        // guardando en el mapping;
+        listaSaludos[counter] = _nuevoSaludo;
+        counter++; // counter += 1; // counter = counter + 1;
+    }
+
+    function get() public view returns (string memory) {
+        return saludo;
+    }
+}
+```
+
+*El tipo de data `Address`*
+
+Cada EOA (externally owned account) y Smart Contract Account tiene una dirección (`address`). Se guarda como un valor de 20 bytes (160 bits o 40 caractéres hexadecimales). Siempre se le prefija el `0x` por el formato hexadecimal. Es usado para enviar y recibir Ether, así como también otras criptomonedas no nativas. 
+
+Ejemplo: 0x5387ddeec8ddC004a217d8e172241EB5F900B302
+
+Puede ser considerado como una indentidad pública en el Blockchain, más como un seudónimo. Para ser más preciso, se puede entender como una cuenta de banco. En el mismo modo en que necesitas una cuenta de banco para recibir y enviar dinero, se usará el `address` para enviar y/o recibir dinero, además de realizar transacciones.
+
+En lo sucesivo se usará `address` como identificador único de un usuario involucrado en realizar alguna transacción dentro del Smart Contract.
+
+Supongamos que deseamos asociar la edad (`uint256`) de cada usuario con su `address`. Para ello usaremos un mapping:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.4.16 <0.9.0;
+
+contract MiPrimerContrato {
+    string saludo; // empieza como un string vacío ('') por definición
+
+    uint256 counter; // empieza en zero por definición
+    mapping(uint256 => string) listaSaludos;
+
+    // mapping address a edad
+    mapping(address => uint256) public edadPorAddress;
+
+    function set(string memory _nuevoSaludo) public {
+        saludo = _nuevoSaludo;
+
+        // guardando en el mapping;
+        listaSaludos[counter] = _nuevoSaludo;
+        counter++; // counter += 1; // counter = counter + 1;
+    }
+
+    function get() public view returns (string memory) {
+        return saludo;
+    }
+
+    function setEdadPorAddress(address _account, uint256 _edad) public {
+        edadPorAddress[_account] = _edad;
+    }
+}
+```
+
+El método `setEdadPorAddress` nos ayuda a maper un `address` a una `edad` en particular. 
+
+Cabe resaltar que la palabra clave `public` se ha utilizado cuando se define el mapping de `edadPorAddress`. Al usar esta palabra clave, Solidity, automáticamente, ha creado un getter. Sin la palabra clave `public`, se tendría que añadir el siguiente código:
+
+```solidity
+    function getEdadporAddress(address _account) public view returns (uint256 _edad) {
+        return edadPorAddress[_account];
+    }
+```
+
+*Propagación de un Error vía `require` o `revert`*
+
+`require` o `revert` en Solidity es usado para validar ciertas condiciones dentro del código y lanzar una excepción si dicha condición no es cumplida. Esto es importante para prevenir la finalización de una transacción si se detecta una condición indeseada.
+
+Cabe mencionar que esta propagación del error será notada por el usuario en el front-end (dApp) antes de firmar una transacción mediante su billetera (de Metamask u otra). 
+
+Veamos cómo aplicamos `require` o `revert` en el código:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.4.16 <0.9.0;
+
+contract MiPrimerContrato {
+		//...
+
+    function setEdadPorAddressManejaError(address _account, uint256 _edad)
+        public
+    {
+        require(_edad >= 30, "Edad menor a 30");
+        edadPorAddress[_account] = _edad;
+    }
+
+    function setEdadPorAddressManejaError2(address _account, uint256 _edad)
+        public
+    {
+        if (_edad <= 29) {
+            revert("Edad menor a 30");
+        }
+        edadPorAddress[_account] = _edad;
+    }
+}
+```
+
+`revert` y `require` propagarán el error si es que no cumple las condiciones allí definidas. La única diferencia entre uno y otro es que `require` lleva el condicional y el mensaje de error como argumentos de un método. En cambio, `revert` ofrece mayor flexibilidad para validar y plantear las condiciones a cumplir. `revert` solo lleva como argumento el mensaje del error.
+
+*Usando eventos a modo de notificación*
+
+`Events` dentro de Solidity son disparados cuando algún metodo en particular es ejecutado. Los eventos pueden llevar información adicional para explicar lo que esá sucediendo. Normalmente, el nombre del evento seguido de la información que contiene, explica muy bien un suceso dentro del blockchain.
+
+Los eventos disparados desde un Smart Contract son prograpagos en el Blockchain. Dichos eventos quedan registrados por siempre. En un futuro se pueden hacer queries de eventos disparados anteriormente. Incluso se puede usar para almacenar información de manera económica. Estos eventos pueden ser captados desde el front-end en un dApp si se establece una conexión. 
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.4.16 <0.9.0;
+
+contract MiPrimerContrato {
+    string saludo; // empieza como un string vacío ('') por definición
+
+    uint256 counter; // empieza en zero por definición
+    mapping(uint256 => string) listaSaludos;
+
+    // mapping address a edad
+    mapping(address => uint256) public edadPorAddress;
+
+    // Eventos
+    // 1 - Disparar un evento cada vez que se cambia el saludo
+    // _account - address de la persona que está llamando el método
+    // _nuevoSaludo - string que representa al nuevo saludo
+    event CambioDeSaludo(address _account, string _nuevoSaludo);
+
+    // 2 - Disparar un evento cuando se asocia un 'address' con una edad
+    // _account - address para el cual se asocia la edad
+    // _edad - nueva edad para asociar con un address
+    event NuevaEdadParaAddress(address _account, uint256 _edad);
+
+    function set(string memory _nuevoSaludo) public {
+        saludo = _nuevoSaludo;
+
+        // guardando en el mapping;
+        listaSaludos[counter] = _nuevoSaludo;
+        counter++; // counter += 1; // counter = counter + 1;
+        emit CambioDeSaludo(msg.sender, _nuevoSaludo);
+    }
+
+    function get() public view returns (string memory) {
+        return saludo;
+    }
+
+    function setEdadPorAddress(address _account, uint256 _edad) public {
+        edadPorAddress[_account] = _edad;
+        emit NuevaEdadParaAddress(_account, _edad);
+    }
+}
+```
+
+*Consideraciones para la creación de una criptomoneda*
+
+Comenzaremos con la creación de una criptomoneda desde cero. Sin librerías. En la actualidad se crean critptomonedas con diez líneas de código. Como desarrolladores, es imporante conocer el funcionamiento interno. Más adelante, utilizaremos librerías que acelaran el proceso mediante templates testeados y auditados. Repasemos los elementos esenciales de todo token (escrito en código en un Smart Contract):
+
+1. Una criptomoneda debería tener un nombre que lo identifique
+2. Una criptomoneda debería tener un símbolo que lo identifique
+3. Definir la cantidad de decimales del token (normalmente hay 18 pero otros tokens tienen 6, como el USDC)
+4. Internamente debería llevar la cuenta de los balances de cada persona que tiene criptomoneda
+5. Llevar la cuenta del total de tokens repartidos
+6. Método que permite la acuñación de tokens a favor de una cuenta en particular (`mint`)
+7. Método que permite quemar (burn) tokens. La lógica detrás de esto es que genera deflación (menos dinero en la economía)
+8. Método que permite transferir tus propios tokens a una segunda persona (método `transfer`)
+9. Método que permite transferir tokens en nombre de una segunda persona con previa aprobación de la segunda persona (método `transferFrom`)
+10. Llevar la cuenta de los balances de tokens a gastar que los mismos dueños (del token) han autorizado a otras cuentas para gastar en su representación
+11. Disparar eventos de Transferencia cada vez que se transfieren tokens de un lado a otro. Dispararar eventos de Aprobación cada vez que una cuenta le da permiso a otra para gastar sus tokens
