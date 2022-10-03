@@ -1,20 +1,20 @@
-**BLOCKCHAIN DEVELOPMENT en UTEC**
+# **BLOCKCHAIN DEVELOPMENT en UTEC**
 
-**Ponente**
+## **Ponente**
 
 Senior Smart Contract Developer en [dcSpark.io](http://dcSpark.io), el primer side chain de Cardano. Cofundador y Líder en Blockchain del juego [Pachacuy.io](http://Pachacuy.io) (El Axie Infinity de South America). Desarollador Blockchain en [CuyToken.com](http://CuyToken.com), la primera empresa de criptocréditos del Perú. 5+ años de experiencia en compañías Fintech (e.g. Yodlee, Tenpo, FIDIS y CuyToken). Estudió Computer Programming Certificate en la Universidad de Santa Clara, California, USA. Graduado del bootcamp del programa inmersivo de Ingeniería de Software Hack Reactor, Los Ángeles. Graduado de Lean UX and Service Design Program (UTEC) y del diplomado de Finanzas Corporativas (UPC).
 
-**Objetivo**
+## **Objetivo**
 
 Explicar y transmitir las herramientas que usan en el día a día los desarrolladores blockchain. Comunicar las buenas prácticas de la industria. Exponer casos de negocio y aplicaciones reales que se han creado dentro del Blockchain.
 
-**Modalidad de Trabajo**
+## **Modalidad de Trabajo**
 
 1. El desarrollo de las clases de programación está basado en casos de la vida real
 2. Las herramientas de blockchain que se usarán en el desarrollo del código son consideradas estándar y buenas prácticas
 3. Se planteará el desarrollo de una startup blockchain ficticia que será el punto de partida para el desarrollo de los Smart Contracts
 
-**Proyectos a desarrollar**
+## **Proyectos a desarrollar**
 
 1. Creación de una criptomoneda (ERC20)
 2. Creación de un contrato de compra/venta de tokens
@@ -23,13 +23,13 @@ Explicar y transmitir las herramientas que usan en el día a día los desarrolla
 5. Desarrollo de una librería NPM agnóstica (para front y back) que permita interactuar con los contratos inteligentes
 6. Front end minimalista para interactuar con los smart contracts usando la librearía NPM
 
-**Proyectos desarrollados**
+## **Proyectos desarrollados**
 
 A continuación es una lista de projectos en los que trabajo de princpio a fin. Servirá de inspiración para los proyectos finales.
 
-<u>Cuy Token</u>
+**<u>Cuy Token</u>**
 
-![image-20220930232557988](https://user-images.githubusercontent.com/3300958/193497021-8c2b7c80-0e54-455f-94aa-3fb03e23a651.png)
+![image](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220930232557988.png)
 
 - Sinopsis: Vender el token para poder otorgar préstamos a diferentes tipos de proyectos con potencial. El primer proyecto financiado fue Pachacuy que logró recaudar 30,000 USD por su propia cuenta.
 - Criptomoneda creada usando el estándar ERC20
@@ -39,7 +39,7 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 - [Código del token](https://github.com/cuytoken/smartcontract/blob/main/cuyToken.sol)
 - [Testing](https://github.com/cuytoken/smartcontract/blob/testing-01/test/Test.js)
 
-<u>_Crypto Index (FIDIS)_</u>
+**<u>_Crypto Index (FIDIS)_</u>**
 
 ![image-20221001000025596](https://user-images.githubusercontent.com/3300958/193497019-ac7ee071-b3ee-4f08-bca3-af4c2aabe18e.png)
 
@@ -51,7 +51,7 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 - [Unit Testing](https://github.com/steveleec/25-token-index/blob/main/test/Test.js)
 - [Whitepaper](https://github.com/FIDISCorp/FI25/blob/main/docs/FIDIS%20FI25%20Crypto%20Index%20White%20Paper.pdf)
 
-<u>_Pachacuy (Axie Infinity de America del Sur)_</u>
+**<u>_Pachacuy (Axie Infinity de America del Sur)_</u>**
 
 ![image-20221001000121020](https://user-images.githubusercontent.com/3300958/193497016-7cb60c31-7a31-42a6-9ea1-18d74aafe9a1.png)
 
@@ -66,7 +66,7 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 - [White Paper](https://pachacuy.gitbook.io/pachacuy/)
 - [Juego en producción](https://play.pachacuy.io/)
 
-<u>_Colección Moche_</u>
+**<u>_Colección Moche_</u>**
 
 ![image-20221001161514110](https://user-images.githubusercontent.com/3300958/193497010-c53836d7-02f4-4236-8684-09623f5b5943.png)
 
@@ -75,7 +75,7 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 3. [Página de compra](https://www.pachacuy.io/moches.php)
 4. [Collección en vitrina de Tofu](https://tofunft.com/collection/pachacuy-moche/items)
 
-<u>_Rand Network_</u>
+**<u>_Rand Network_</u>**
 
 ![image-20221001154441301](https://user-images.githubusercontent.com/3300958/193497014-16c3c730-4df8-4569-a680-9e98536db28b.png)
 
@@ -85,14 +85,14 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 2. Se utilizan dos diferentes blockchain Ethereum y Moonbeam. En la red Ethereum se manejan los fondos e inversiones. En Polygon se realizan las transacciones y procesamientos pesados. La razón de la separación es el costo de transacción.
 3. Utiliza contratos actualizables que le permiten arreglar bugs futuros o crear nuevas estructuras de datos internat para albergar información relevante adicional.
 
-<u>_dcSpark_</u>
+**<u>_dcSpark_</u>**
 
 ![image-20221001162033296](https://user-images.githubusercontent.com/3300958/193497009-06fe33d3-378b-4182-bed1-36afc35b28af.png)
 
 1. Sinopsis: Crear compatibilidad para blockchains que no son compatible con la Maquina Virtual de Ethereum. Lo hace a través de la creación de Sidechains o la implementación de Layer 2.
 2. En la actualidad, mi trabajo es crear un contrato de Staking. Es decir, un contrato que otorga beneficios por realizar depósitos, muy parecido a un depósito a plazo fijo.
 
-**Blockchain Framework:**
+## **Blockchain Framework:**
 
 ![image-20221001173609057](https://user-images.githubusercontent.com/3300958/193497008-44d89e72-3b9d-413c-af32-68bc8a3a5b54.png)
 
@@ -106,8 +106,9 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 8. Block: Es un contenedor de todas las transacciones que se añadirán al blockchain. Estos bloques están linkeados unos con otros mediante valores de hash.
 9. Blockchain: Es un libro público en el cual los bloques están linkeados, lo cual nos permite ver si las transacciones son validas o no.
 
-**Ethereum Virtual Machine**
-_Ambiente virtual_
+## **Ethereum Virtual Machine**
+
+**_Ambiente virtual_**
 
 EVM significa Máquina Virtual de Ethereum. En simple, EVM es el sistema operativo de Ethereum. Dentro de esto, una máquina virtual puede proporcionar un entorno de ejecución para ejecutar contratos inteligentes.
 
@@ -115,39 +116,39 @@ Por lo general, una vez que se compila un contrato inteligente, genera dos salid
 
 Existen diferentes lenguajes de programación que pueden ser entendidos por la EVM (Solidity, Vyper, etc.).
 
-_Computadora Mundial_
+**_Computadora Mundial_**
 
 La máquina virtual de Ethereum funciona como una sola entidad mantenida por miles de computadoras interconectadas llamadas nodos, que también se conoce como la computadora mundial. Estas computadoras ejecutan una implementación del cliente Ethereum y tienen una estructura de igual a igual (Peer to Peer - P2P). Su trabajo principal es procesar y validar transacciones, así como asegurar y estabilizar todo el ecosistema. Por eso, el EVM podría verse como un motor de procesamiento y una plataforma de software que utiliza computación descentralizada.
 
-_Estado de la cadena de bloques_
+**_Estado de la cadena de bloques_**
 
 Dentro de la EVM se definen las reglas para crear un nuevo estado válido de bloque a bloque. Una vez que se ejecutan los contratos inteligentes, el EVM calcula el nuevo estado de la red después de agregar un nuevo bloque a la cadena. En cualquier momento dado, la EVM tiene un y solo un estado 'canónico'. Es en este entorno que viven las cuentas de Ethereum y los contratos inteligentes. El protocolo Ethereum tiene como objetivo mantener esta máquina especial realizando operaciones ininterrumpidas.
 
 En otras palabras, el objetivo de EVM es averiguar el estado general de Ethereum para cada bloque en el Blockchain. Utiliza un libro mayor (public ledger) distribuido donde se rastrean las transacciones y, al mismo tiempo, impone reglas a los usuarios sobre cómo interactuar con la red.
 
-_Capa_
+**_Capa_**
 
 Se encuentra en la parte superior de la capa de red de nodos y hardware de Ethereum.
 
-_Turing completo_
+**_Turing completo_**
 
 Puede realizar pasos lógicos para la función computacional. Es capaz de hacer cualquier cálculo o programa informático posible. Detrás de esta característica se encuentran los OPCODES que son como una lista operaciones aisladas que arman como piezas de lego.
 
-_Gas_
+**_Gas_**
 
 A cada instrucción de EVM se le asigna un costo. Eso ayuda a mantener un recuento de los costos totales de cualquier transacción determinada. Las unidades de gas miden el costo de ejecutar operaciones en EVM. Para calcular el total de gas a gastar se cuentan el total de OPCODES a usar dado que cada uno de ellos tiene un costo espécifico. Cualquier transacción empieza en 21000 gas.
 
-_OPCODES (códigos de operación)_
+**_OPCODES (códigos de operación)_**
 
 El EVM es capaz de ejecutar instrucciones a nivel de máquina conocidas como OPCODES (códigos de operación). Estos códigos de operación se utilizan para definir cualquier operación particular dentro del EVM. Hay códigos de operación especiales para operaciones aritméticas, así como para leer desde el almacenamiento. Cada código de operación es un byte. Se puede utilizar un máximo de 256 códigos de operación. [Ver lista completa](https://ethereum.org/en/developers/docs/evm/opcodes/).
 
 ![image-20221001194415274](https://user-images.githubusercontent.com/3300958/193497004-445908d4-23d9-4054-acaf-2f455a784a26.png)
 
-_Contratos inteligentes_
+**_Contratos inteligentes_**
 
 Los contratos inteligentes son líneas de código utilizadas por diferentes dos o más partes para realizar transacciones entre sí. Dado que los contratos inteligentes se cargan y ejecutan en el EVM, no se necesita un tercero fiscalizador. Un contrato inteligente es una lista de operaciones que se ejecutarán cuando se cumplan ciertas condiciones. Estas operaciones pueden ser muy diferentes (por ejemplo, creación de tokens, transferencia de fondos) y estarán guiadas por código y ejecutados por máquina.
 
-_Bytecode_
+**_Bytecode_**
 
 ![image-20221001200726257](https://user-images.githubusercontent.com/3300958/193497003-3d281061-3387-4ce1-b9c0-bca9b56d0bb6.png)
 
@@ -155,13 +156,13 @@ El Smart Contract se compila a bytcode y ABI. El bytecode se puede traducir en O
 
 [Ver ejemplo de NFT del juego Pachacuy](https://polygonscan.com/address/0xc9Fd34bDA1965f2965C5238838EbB230482167B0#code)
 
-_ABI (application binary interface)_
+**_ABI (application binary interface)_**
 
 ![image-20221001202149628](https://user-images.githubusercontent.com/3300958/193497002-f9fa12d0-e1cb-47b6-8019-fce5682d79e2.png)
 
 Usado por el front para poder instanciar el objeto 'Contrato' de las librerías como Ethers.js. Es una interface en el cual se definen qué parámetros serán pasados, qué valores ser retornarán, nombres de los métodos y otras características de los métodos y propiedades del smart contract.
 
-**Stack (tooling) de desarrollo web 3**
+## **Stack (tooling) de desarrollo web 3**
 
 Las herramientas de un blockchain developer son variadas e incluyen herramientas de testing, auditoría, computación en la nube y demás. Estas son las herramientas que uso en mi día a día como desarrollador blockchain:
 
@@ -179,7 +180,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 - Faucets
 - MythX
 
-<u>Hardhat</u>
+**<u>Hardhat</u>**
 
 ![image-20220927070644523](https://user-images.githubusercontent.com/3300958/193497041-1ebf903c-14d3-44de-997c-e710601ec89c.png)
 
@@ -191,7 +192,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 6. Dentro de un ambiente de testing, te permite hacer un fork del blockchain Ethereum para interactuar directamente con Smart Contracts publicados en dicha red. Esto es relevante porque algunos Smart Contracts no están en Testnet y no hay otra manera de probarlos.
 7. Permite configurar diferentes tipos de versión de compiladores de Solidty, así como también especificar la precisón de la optimización (runs) de los Smart Contracts.
 
-<u>Ethers.js</u>
+**<u>Ethers.js</u>**
 
 ![image-20220927070621500](https://user-images.githubusercontent.com/3300958/193497043-6194550b-0af5-4673-b55e-11398e9993e6.png)
 
@@ -200,7 +201,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 3. Si es usado desde el front, por lo general se usa con Metamask (u otra billetera que funciona en el navegador). A través de Metamask, las operaciones definidas con Ether.js será firmadas con la billetera de Metamask (donde se alberga la llave privada del usuario)
 4. Para ser usado desde el back, se requiere tener la llave privada alojada en un archivo .env e instanciar el objeto 'Contract' en el código del backend.
 
-<u>Metamask</u>
+**<u>Metamask</u>**
 
 ![image-20220927070334618](https://user-images.githubusercontent.com/3300958/193497046-581118bb-6ca5-4f3a-b552-f69525c56219.png)
 
@@ -209,7 +210,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 3. Con Metamask, se pueden crear llaves privadas y públicas a demanda.
 4. Puedes agregar diferentes criptomonedas para visualizar el balance de las mismas, así como también realizar transferencias a diferentes cuentas (addresses) con una simple interface.
 
-<u>Gnosis safe</u>
+**<u>Gnosis safe</u>**
 
 ![image-20220927070450265](https://user-images.githubusercontent.com/3300958/193497044-cbaa4914-8519-40a2-8744-9a137b90958c.png)
 
@@ -219,7 +220,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 
 ![img](https://134244847-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2F-MhyEZtd5TVytPJtyS7v-2910905616%2Fuploads%2Fgit-blob-6b2d55c528d4c659bb0c725c4046aa2302962b9a%2Fimage.png?alt=media)
 
-<u>OpenZeppelin</u>
+**<u>OpenZeppelin</u>**
 
 ![image-20220927070739298](https://user-images.githubusercontent.com/3300958/193497039-cb2b77cd-9b1d-4401-8b02-917b9fe8d3c4.png)
 
@@ -229,7 +230,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 4. OZ es aceptado y usado en la industria del Blockchain como un estándar de desarrollo
 5. Sigue un desarrollo simple, modular y robusto. Como piezas de lego, se pueden unir y separar según la conveniencia
 
-<u>OpenZeppelin Defender</u>
+**<u>OpenZeppelin Defender</u>**
 
 ![image-20220927071709970](https://user-images.githubusercontent.com/3300958/193497038-137b31f1-6e5a-4e43-b48f-408b40c897d6.png)
 
@@ -239,7 +240,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 4. Autotask: desarrolla scripts usando NodeJS que permite ejecutar ciertos métodos en un Smart Contract. Estos scripts se ejecutan en un servidor privado (serverless) a demanda. Se puede llamar a un autotask mediante un web hook (url).
 5. Sentinel: Es capaz de escuchar eventos y ejecuciones de funciones provenientes de smart contracts y actuar en consecuencia. Es posible concatenar un sentinel con un autotask. El sentinel puede disparar mensajes de correo electrónico o Slack.
 
-<u>Remix IDE</u>
+**<u>Remix IDE</u>**
 
 ![image-20220929222705695](https://user-images.githubusercontent.com/3300958/193497037-7deb6580-8df9-416e-a835-fbf2b75219d0.png)
 
@@ -248,7 +249,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 3. Permite la publicación de Smart Contracts en diferentes blockchain a través de Metamask.
 4. Se puede sincronizar el desarrollo local de smart contracts (e.g. en Visual Studio Code) con Remix IDE para propósitos de compilación y publicación
 
-<u>Mythril (by ConsenSys)</u>
+**<u>Mythril (by ConsenSys)</u>**
 
 ![image-20220929223007352](https://user-images.githubusercontent.com/3300958/193497036-2ad9cb0b-2aae-4bb2-874b-b93f6edf5935.png)
 
@@ -257,7 +258,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 3. Herramienta gratuita. Se ejecuta en python y la manera más sencilla de usarlo es crear un entorno virtual en PyCharm (gratuito) y ejecutar el comando de mythril que analiza el Smart Contract.
 4. Permite crear graphos que muestran las conecciones entre los diferentes Smart Contracts.
 
-<u>Alchemy/Infura/Moralis</u>
+**<u>Alchemy/Infura/Moralis</u>**
 
 ![image-20220929225715377](https://user-images.githubusercontent.com/3300958/193497034-3992d844-a203-47f0-b16f-5b03d5bd1c9c.png)
 
@@ -265,7 +266,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 2. Incrementan la velocidad de respuesta ante una transacción en el blockchain
 3. Disminuye drásticamente los fallos de conexión entre una aplicación decentralizada y el Blockchain
 
-<u>Etherscan</u>
+**<u>Etherscan</u>**
 
 ![image-20220929234626271](https://user-images.githubusercontent.com/3300958/193497030-622b4c34-6fc7-4948-b9f3-bdc90bc48ff6.png)
 
@@ -273,7 +274,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 2. Permite indagar detalles (quién llamó el metodo, qué contrato se llamó, cuánto gas consumió la operación, qué método se ejecutó) de transacciones hash y contratos.
 3. Para poder verificar contratos de manera programática, se puede obtener un API KEY y usarlo en librearías como Hardhat.
 
-<u>Solidity (lenguaje de programación)</u>
+**<u>Solidity (lenguaje de programación)</u>**
 
 ![image-20220930000916248](https://user-images.githubusercontent.com/3300958/193497028-a90f9d7a-0336-4def-b45c-41af0086bec7.png)
 
@@ -283,7 +284,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 4. Su compilación product bytecode y ABI. El primero es entendido por máquinas y el segundo por seres humanos.
 5. Con Solidity se pueden creara contratos de votaciones, subastas, billeteras multifirmas, entre otros.
 
-<u>Faucets</u>
+**<u>Faucets</u>**
 
 ![image-20220930001735070](https://user-images.githubusercontent.com/3300958/193497026-dee07fcd-2dba-4835-aadd-6c98f87b80e6.png)
 
@@ -291,20 +292,20 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 2. Solo las redes Testnet tienen faucets. Cada testnet (mumbai, BSC testnet, Goerli, etc) posee un faucet donde pedir tokens nativos gratuitos.
 3. Si se requiren tokens en mayor cantidad se puede contactar directamente a cada Blockchain en Telegram o Discord.
 
-<u>MythX (auditoría automatizada)</u>
+**<u>MythX (auditoría automatizada)</u>**
 
 ![image-20220930002626352](https://user-images.githubusercontent.com/3300958/193497023-28e7419d-3308-44b4-855c-75ce8a06e46a.png)
 
 1. Servicio de análisis de Smart Contracts a demanda. A través de una simple interface gráfica, se muestran los resultados del análisis de vulnerabilidades de Smart Contracts.
 2. Desde el Visual Studio Code, se puede usar una extensión para enviar a analizar los Smart Contracts. Del mismo modo, existen comandos de terminal para realizar la misma acción
 
-**Programando en Solidity**
+## **Programando en Solidity**
 
 Vamos a aprender a programar en Solidity con el objetivo de desarrollar una startup ficticia que desea llevar al mercado sus NFTs. A medida que aprendemos Solidity, iremos desarrollando diferentes Smart Contracts requeridos.
 
 El primer Smart Contract que vamos a desarrollar será la criptomoneda (token ERC20) de la empresa que será publicado en una Testnet llamada Goerli. Antes de lograr ello, revisemos algunos conceptos sobre Solidity.
 
-_¿Qué es Solidity?_
+**_¿Qué es Solidity?_**
 
 - Es un lenguaje orientado a objetos
 - Lenguaje de alto nivel para la implementación de Smart Contracts
@@ -313,14 +314,14 @@ _¿Qué es Solidity?_
 - Influenciado por C++, Python y Javascript
 - Es estáticamente tipado, soporta la herencia (de objetos), librerías y definición de tipos de datos complejos definidos por el usuario
 
-_Dos tipo de cuentas en Ethereum_
+**_Dos tipo de cuentas en Ethereum_**
 
 ![image-20221001222155465](https://user-images.githubusercontent.com/3300958/193497001-1ad024fe-ed54-4ead-a926-b45d7c58bdb1.png)
 
 - EOA (Externally owned account): Son usuarios (personas) que posee una llave privada. No posee código. Pueden mantener un balance positivo de Ether. Firma transacciones. Puede transferir activos (assets).
 - CA (Contract Account): Son cuentas controladas por código dentro del Smart Contract.
 
-_Mi primer contrato en Solidity_
+**_Mi primer contrato en Solidity_**
 
 En [Remix](https://remix.ethereum.org/), crear un nuevo archivo llamada
 
@@ -349,7 +350,7 @@ La gran diferencia de escribr este mismo código en otro lenguage de programaci�
 
 Usando Smart Contracts, el "servidor" y la "base de datos" están dados por la Máquina Virtual de Ethereum (EVM). Las lecturas y escrituras a raíz de la ejecución del código, se hace desde y sobre el blockchain.
 
-_Publicar el Smart Contract_
+**_Publicar el Smart Contract_**
 
 1. Para publicar el contrato usar Metamask en la red Testnet de Goerli. Previamente solicitar Ether en algún [faucet de Goerli](https://goerlifaucet.com/).
 
@@ -369,7 +370,7 @@ _Publicar el Smart Contract_
 
 ![image-20221002070341543](https://user-images.githubusercontent.com/3300958/193496993-ecfc7741-1d7e-4e69-a7ec-2e07f0b593b3.png)
 
-_Verificación de un Smart Contract_
+**_Verificación de un Smart Contract_**
 
 1. Para verificar, hacer click en la dirección del contrato creado en el anterior paso. O en su defecto, ir al siguiente link `https://goerli.etherscan.io/address/0xc5bccf767704432a3a22318a0df3067d9a3fc217`, del cual la última parte será reemplazada por la dirección (address) de tu contrato.
 
@@ -395,7 +396,7 @@ _Verificación de un Smart Contract_
 
 ![image-20221002073616250](https://user-images.githubusercontent.com/3300958/193496581-80b79e6a-78df-4718-9c28-fb779aaabf85.png)
 
-_Hash table en contratos inteligentes_
+**_Hash table en contratos inteligentes_**
 
 La estructura de datos llamado mapping es uno de los más usados en Solidity. `mapping(_KeyType => _ValueType)` Es el equivalente a un Hash Table o un objeto (`var obj = {}`) en Javascript. A cada `key` le corresopnde un `value` dentro del mapping.
 
@@ -435,7 +436,7 @@ contract MiPrimerContrato {
 }
 ```
 
-_El tipo de data `Address`_
+**_El tipo de data `Address`_**
 
 Cada EOA (externally owned account) y Smart Contract Account tiene una dirección (`address`). Se guarda como un valor de 20 bytes (160 bits o 40 caractéres hexadecimales). Siempre se le prefija el `0x` por el formato hexadecimal. Es usado para enviar y recibir Ether, así como también otras criptomonedas no nativas.
 
@@ -488,7 +489,7 @@ Cabe resaltar que la palabra clave `public` se ha utilizado cuando se define el 
     }
 ```
 
-_Propagación de un Error vía `require` o `revert`_
+**_Propagación de un Error vía `require` o `revert`_**
 
 `require` o `revert` en Solidity es usado para validar ciertas condiciones dentro del código y lanzar una excepción si dicha condición no es cumplida. Esto es importante para prevenir la finalización de una transacción si se detecta una condición indeseada.
 
@@ -523,7 +524,7 @@ contract MiPrimerContrato {
 
 `revert` y `require` propagarán el error si es que no cumple las condiciones allí definidas. La única diferencia entre uno y otro es que `require` lleva el condicional y el mensaje de error como argumentos de un método. En cambio, `revert` ofrece mayor flexibilidad para validar y plantear las condiciones a cumplir. `revert` solo lleva como argumento el mensaje del error.
 
-_Usando eventos a modo de notificación_
+**_Usando eventos a modo de notificación_**
 
 `Events` dentro de Solidity son disparados cuando algún metodo en particular es ejecutado. Los eventos pueden llevar información adicional para explicar lo que esá sucediendo. Normalmente, el nombre del evento seguido de la información que contiene, explica muy bien un suceso dentro del blockchain.
 
@@ -573,7 +574,7 @@ contract MiPrimerContrato {
 }
 ```
 
-_Consideraciones para la creación de una criptomoneda_
+**_Consideraciones para la creación de una criptomoneda_**
 
 Comenzaremos con la creación de una criptomoneda desde cero. Sin librerías. En la actualidad se crean critptomonedas con diez líneas de código. Como desarrolladores, es imporante conocer el funcionamiento interno. Más adelante, utilizaremos librerías que acelaran el proceso mediante templates testeados y auditados. Repasemos los elementos esenciales de todo token (escrito en código en un Smart Contract):
 
