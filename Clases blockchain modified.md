@@ -359,11 +359,11 @@ _Publicar el Smart Contract_
 3. En `CONTRACT` asegurar que está seleccionado el contrato que se desa publicar
 4. Al hacer clic en `Deploy`, abrirá un pop-up de Metamask para poder confirmar y firmar la transacción, lo cual hará posible la creación del Smart Contract en el Blockchain.
 
-<img src="/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002063404065.png" alt="image-20221002063404065" style="zoom:30%;" />
+![img](https://user-images.githubusercontent.com/3300958/193496997-8adc83b8-bc59-446e-b748-add08ad19be0.png)
 
 5. Cuando la transacción haya terminado, se podrá visualizar dentro de la pestaña de `Actividad`. Hacer click en `Implementación de contrato` y se abrirá otra ventana. En dicha ventana hacer click en `Ver en el explorador de blockes`.
 
-<img src="/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002065253371.png" alt="image-20221002065253371" style="zoom:30%;" />
+![img](https://user-images.githubusercontent.com/3300958/193496996-6e1893fe-7356-4f8f-9626-6e8d978efb3a.png)
 
 6. Serás dirigido a Goerli.etherescan.io donde podrás ver los detalles de la transacción (publicación del Smart Contract). Se puede observar que el contrato ha sido creado en la siguiente dirección: `0xc5bccf767704432a3a22318a0df3067d9a3fc217`. Esta misma dirección servirá para hacer su posterior verificación.
 
