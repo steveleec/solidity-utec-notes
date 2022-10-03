@@ -29,7 +29,7 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 
 <u>Cuy Token</u>
 
-![image-20220930232557988](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220930232557988.png)
+![image-20220930232557988](https://user-images.githubusercontent.com/3300958/193497021-8c2b7c80-0e54-455f-94aa-3fb03e23a651.png)
 
 - Sinopsis: Vender el token para poder otorgar préstamos a diferentes tipos de proyectos con potencial. El primer proyecto financiado fue Pachacuy que logró recaudar 30,000 USD por su propia cuenta.
 - Criptomoneda creada usando el estándar ERC20
@@ -41,7 +41,7 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 
 <u>_Crypto Index (FIDIS)_</u>
 
-![image-20221001000025596](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221001000025596.png)
+![image-20221001000025596](https://user-images.githubusercontent.com/3300958/193497019-ac7ee071-b3ee-4f08-bca3-af4c2aabe18e.png)
 
 - Sinopsis: Comprar una sola criptomoneda que represente a las veinticinco criptomonedas más importantes (tipo S&P 500). Esta lista variará dependiendo de la importancia de cada token.
 - Índice de las 25 primero criptomonedas
@@ -53,7 +53,7 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 
 <u>_Pachacuy (Axie Infinity de America del Sur)_</u>
 
-![image-20221001000121020](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221001000121020.png)
+![image-20221001000121020](https://user-images.githubusercontent.com/3300958/193497016-7cb60c31-7a31-42a6-9ea1-18d74aafe9a1.png)
 
 - Sinopsis: Juego que representa un mundo virtual en el cual un cuy (personaje principal - NFT) puede comprar tierras y establecer negocios dentro. Los cuyes visitantes hacen uso de los negocios. Estas transacciones tienen el potencial de generar ingresos para dueños y clientes.
 - Hay creado su propia moneda llamada Pachacuy
@@ -68,7 +68,7 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 
 <u>_Colección Moche_</u>
 
-![image-20221001161514110](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221001161514110.png)
+![image-20221001161514110](https://user-images.githubusercontent.com/3300958/193497010-c53836d7-02f4-4236-8684-09623f5b5943.png)
 
 1. Sinospsis: colección de 10,000 NFTs lanzado en la red Binance. El personaje principal es un cuy y fue creado con un algoritmo de generación de imágenes por capas.
 2. Se utilizó un smart contract que sigue el estándar ERC721
@@ -77,9 +77,9 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 
 <u>_Rand Network_</u>
 
-![image-20221001154441301](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221001154441301.png)
+![image-20221001154441301](https://user-images.githubusercontent.com/3300958/193497014-16c3c730-4df8-4569-a680-9e98536db28b.png)
 
-![image-20221001155204926](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221001155204926.png)
+![image-20221001155204926](https://user-images.githubusercontent.com/3300958/193497012-f2193f37-90cb-4d80-ac05-236a1cdc622c.png)
 
 1. Sinopsis: Los usuarios depositan USDC (una moneda estable) en Ethereum. Al juntarse, se invierte en diferentes protocolos de Finanzas Decentralizadas (DeFi) que generan intereses y/o recompensas sobre lo depositado. Luego de un tiempo, se retiran los intereses generados para ser repartidos entre los usuarios iniciales
 2. Se utilizan dos diferentes blockchain Ethereum y Moonbeam. En la red Ethereum se manejan los fondos e inversiones. En Polygon se realizan las transacciones y procesamientos pesados. La razón de la separación es el costo de transacción.
@@ -87,14 +87,14 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 
 <u>_dcSpark_</u>
 
-![image-20221001162033296](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221001162033296.png)
+![image-20221001162033296](https://user-images.githubusercontent.com/3300958/193497009-06fe33d3-378b-4182-bed1-36afc35b28af.png)
 
 1. Sinopsis: Crear compatibilidad para blockchains que no son compatible con la Maquina Virtual de Ethereum. Lo hace a través de la creación de Sidechains o la implementación de Layer 2.
 2. En la actualidad, mi trabajo es crear un contrato de Staking. Es decir, un contrato que otorga beneficios por realizar depósitos, muy parecido a un depósito a plazo fijo.
 
 **Blockchain Framework:**
 
-![image-20221001173609057](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221001173609057.png)
+![image-20221001173609057](https://user-images.githubusercontent.com/3300958/193497008-44d89e72-3b9d-413c-af32-68bc8a3a5b54.png)
 
 1. Transacción: unidad fundamental dentro de un blockchain. Cualquier operación llevada a cabo se atomiza en una transacción que es enviada por un usuario para ser incluida en el siguiente blocke.
 2. Wallet: Es como una cuenta de banco. Se usa para ejecutar transacciones. Así mismo, una wallet puede llevar la cuenta de los activos de una dirección (address). La wallet en sí misma no almacena los activos, solo muestra los balances.
@@ -141,7 +141,7 @@ _OPCODES (códigos de operación)_
 
 El EVM es capaz de ejecutar instrucciones a nivel de máquina conocidas como OPCODES (códigos de operación). Estos códigos de operación se utilizan para definir cualquier operación particular dentro del EVM. Hay códigos de operación especiales para operaciones aritméticas, así como para leer desde el almacenamiento. Cada código de operación es un byte. Se puede utilizar un máximo de 256 códigos de operación. [Ver lista completa](https://ethereum.org/en/developers/docs/evm/opcodes/).
 
-![image-20221001194415274](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221001194415274.png)
+![image-20221001194415274](https://user-images.githubusercontent.com/3300958/193497004-445908d4-23d9-4054-acaf-2f455a784a26.png)
 
 _Contratos inteligentes_
 
@@ -149,7 +149,7 @@ Los contratos inteligentes son líneas de código utilizadas por diferentes dos 
 
 _Bytecode_
 
-![image-20221001200726257](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221001200726257.png)
+![image-20221001200726257](https://user-images.githubusercontent.com/3300958/193497003-3d281061-3387-4ce1-b9c0-bca9b56d0bb6.png)
 
 El Smart Contract se compila a bytcode y ABI. El bytecode se puede traducir en OPCODES.
 
@@ -157,7 +157,7 @@ El Smart Contract se compila a bytcode y ABI. El bytecode se puede traducir en O
 
 _ABI (application binary interface)_
 
-![image-20221001202149628](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221001202149628.png)
+![image-20221001202149628](https://user-images.githubusercontent.com/3300958/193497002-f9fa12d0-e1cb-47b6-8019-fce5682d79e2.png)
 
 Usado por el front para poder instanciar el objeto 'Contrato' de las librerías como Ethers.js. Es una interface en el cual se definen qué parámetros serán pasados, qué valores ser retornarán, nombres de los métodos y otras características de los métodos y propiedades del smart contract.
 
@@ -181,7 +181,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 
 <u>Hardhat</u>
 
-![image-20220927070644523](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220927070644523.png)
+![image-20220927070644523](https://user-images.githubusercontent.com/3300958/193497041-1ebf903c-14d3-44de-997c-e710601ec89c.png)
 
 1. Es un ambiente de desarrollo profesional para Ethereum.
 2. Te permite publicar contratos en diferentes blockchain (Polygon, Ethereum, Binance, Mumbai, etc.) con simples configuraciones, así como también publicar en un blockchain local para poder verificar que el script de deployment es válido.
@@ -193,7 +193,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 
 <u>Ethers.js</u>
 
-![image-20220927070621500](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220927070621500.png)
+![image-20220927070621500](https://user-images.githubusercontent.com/3300958/193497043-6194550b-0af5-4673-b55e-11398e9993e6.png)
 
 1. Librería compacta y completa que te permite interactuar con diferentes blockchain de manera programática. Es decir, puedes leer información del Blockchain, así como también acceder a métodos y propiedades de Smart Contracts publicados en el Blockchain.
 2. Puede ser usado tanto el front-end como en el back-end para crear tareas o procesos automatizados que involucren interactuar con Smart Contracts publicados en el Blockchain.
@@ -202,16 +202,16 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 
 <u>Metamask</u>
 
-![image-20220927070334618](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220927070334618.png)
+![image-20220927070334618](https://user-images.githubusercontent.com/3300958/193497046-581118bb-6ca5-4f3a-b552-f69525c56219.png)
 
 1. Es una billetera de criptomonedas que funciona como extensión del browser o aplicación de celular.
 2. Te permite interactuar (conectar y autenticarte) con aplicaciones decentralizadas con previa confirmación del usuario antes de firmar cada transacción.
 3. Con Metamask, se pueden crear llaves privadas y públicas a demanda.
 4. Puedes agregar diferentes criptomonedas para visualizar el balance de las mismas, así como también realizar transferencias a diferentes cuentas (addresses) con una simple interface.
 
-<u>Gnsosis safe</u>
+<u>Gnosis safe</u>
 
-![image-20220927070450265](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220927070450265.png)
+![image-20220927070450265](https://user-images.githubusercontent.com/3300958/193497044-cbaa4914-8519-40a2-8744-9a137b90958c.png)
 
 1. Platarforma para manejar activos (criptomonedas) dentro del Blockchain
 2. Se pueden crear diferentes vaúles seguros (Safe) que tienen una dirección (address) propia para poder recibir fondos
@@ -221,7 +221,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 
 <u>OpenZeppelin</u>
 
-![image-20220927070739298](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220927070739298.png)
+![image-20220927070739298](https://user-images.githubusercontent.com/3300958/193497039-cb2b77cd-9b1d-4401-8b02-917b9fe8d3c4.png)
 
 1. Provee Smart Contracts base que sirven como los fundamentos para crear otras aplicaciones más complejas.
 2. En esencia, provee los implementaciones de los estándares más usados en el desarrollo de Smart Contracts (ERC20, ERC721, ERC1155, ERC777, etc.)
@@ -231,7 +231,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 
 <u>OpenZeppelin Defender</u>
 
-![image-20220927071709970](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220927071709970.png)
+![image-20220927071709970](https://user-images.githubusercontent.com/3300958/193497038-137b31f1-6e5a-4e43-b48f-408b40c897d6.png)
 
 1. Son cuatro los principales servicios que ofrece Defender: Admin, Relay, Autotask y Sentinel.
 2. Admin: Te permite ejecutar funciones de algún Smart Contract usando credenciales multifirma. Es decir, dos o más cuentas podran firmar una transaccón.
@@ -241,7 +241,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 
 <u>Remix IDE</u>
 
-![image-20220929222705695](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220929222705695.png)
+![image-20220929222705695](https://user-images.githubusercontent.com/3300958/193497037-7deb6580-8df9-416e-a835-fbf2b75219d0.png)
 
 1. Es una interfaz de desarrollo que permite la creación rápida de Smart Contracts. Es usado normalmente para crear rápidos prototipos o pruebas de concepto de Smart Contracts.
 2. Gracias a su gran variedad de compiladores de Solidty, es ideal para debuguear entre diferentes versiones y comprobar lo que funciona.
@@ -250,7 +250,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 
 <u>Mythril (by ConsenSys)</u>
 
-![image-20220929223007352](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220929223007352.png)
+![image-20220929223007352](https://user-images.githubusercontent.com/3300958/193497036-2ad9cb0b-2aae-4bb2-874b-b93f6edf5935.png)
 
 1. Herramienta de análisis de seguridad (vulnerabilidades) para Smart Contracts. Usa el bytecode que se genera al compilar los Smart Contracts.
 2. Es utilizado para proceso de auditoría dado que sugiere potenciales vectores de ataque a Smart Contracts. Luego del análisis, esta herramienta señala buenas prácticas usadas para combatir las falencias encontradas.
@@ -259,7 +259,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 
 <u>Alchemy/Infura/Moralis</u>
 
-![image-20220929225715377](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220929225715377.png)
+![image-20220929225715377](https://user-images.githubusercontent.com/3300958/193497034-3992d844-a203-47f0-b16f-5b03d5bd1c9c.png)
 
 1. Son servicios de conexión privado a nodos de blockchain.
 2. Incrementan la velocidad de respuesta ante una transacción en el blockchain
@@ -267,7 +267,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 
 <u>Etherscan</u>
 
-![image-20220929234626271](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220929234626271.png)
+![image-20220929234626271](https://user-images.githubusercontent.com/3300958/193497030-622b4c34-6fc7-4948-b9f3-bdc90bc48ff6.png)
 
 1. Es un explorador de bloques y analítica para blockchain. Además permite revisar el código de los smart contracts publicados así como también su verificación.
 2. Permite indagar detalles (quién llamó el metodo, qué contrato se llamó, cuánto gas consumió la operación, qué método se ejecutó) de transacciones hash y contratos.
@@ -275,7 +275,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 
 <u>Solidity (lenguaje de programación)</u>
 
-![image-20220930000916248](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220930000916248.png)
+![image-20220930000916248](https://user-images.githubusercontent.com/3300958/193497028-a90f9d7a-0336-4def-b45c-41af0086bec7.png)
 
 1. Solidity es el lenguage de programación preferido entre desarrolladores así como también la gran mayoría de blockchains usan Solidity como su primer lenguage para desarrollar.
 2. Es muy parecido a Javascript, C++ y Python. Es estáticamente tipado, soporta herencia de contratos, el uso de librerías y la definición de typos complejos por parte del usuario.
@@ -285,7 +285,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 
 <u>Faucets</u>
 
-![image-20220930001735070](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220930001735070.png)
+![image-20220930001735070](https://user-images.githubusercontent.com/3300958/193497026-dee07fcd-2dba-4835-aadd-6c98f87b80e6.png)
 
 1. Proveen token nativos (ether) que sirven para pagar el gas de las transacciones en el blockchain.
 2. Solo las redes Testnet tienen faucets. Cada testnet (mumbai, BSC testnet, Goerli, etc) posee un faucet donde pedir tokens nativos gratuitos.
@@ -293,7 +293,7 @@ Las herramientas de un blockchain developer son variadas e incluyen herramientas
 
 <u>MythX (auditoría automatizada)</u>
 
-![image-20220930002626352](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220930002626352.png)
+![image-20220930002626352](https://user-images.githubusercontent.com/3300958/193497023-28e7419d-3308-44b4-855c-75ce8a06e46a.png)
 
 1. Servicio de análisis de Smart Contracts a demanda. A través de una simple interface gráfica, se muestran los resultados del análisis de vulnerabilidades de Smart Contracts.
 2. Desde el Visual Studio Code, se puede usar una extensión para enviar a analizar los Smart Contracts. Del mismo modo, existen comandos de terminal para realizar la misma acción
@@ -315,7 +315,7 @@ _¿Qué es Solidity?_
 
 _Dos tipo de cuentas en Ethereum_
 
-![image-20221001222155465](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221001222155465.png)
+![image-20221001222155465](https://user-images.githubusercontent.com/3300958/193497001-1ad024fe-ed54-4ead-a926-b45d7c58bdb1.png)
 
 - EOA (Externally owned account): Son usuarios (personas) que posee una llave privada. No posee código. Pueden mantener un balance positivo de Ether. Firma transacciones. Puede transferir activos (assets).
 - CA (Contract Account): Son cuentas controladas por código dentro del Smart Contract.
@@ -353,7 +353,7 @@ _Publicar el Smart Contract_
 
 1. Para publicar el contrato usar Metamask en la red Testnet de Goerli. Previamente solicitar Ether en algún [faucet de Goerli](https://goerlifaucet.com/).
 
-![image-20221002063129132](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002063129132.png)
+![image-20221002063129132](https://user-images.githubusercontent.com/3300958/193497000-4ac8b832-d990-4631-8f83-d303c4b27494.png)
 
 2. En `ENVIROMENT` escoger `Injected Provider - Metamask`, lo cual conectará el IDE de Remix con una billetera de Metamask.
 3. En `CONTRACT` asegurar que está seleccionado el contrato que se desa publicar
@@ -367,45 +367,45 @@ _Publicar el Smart Contract_
 
 6. Serás dirigido a Goerli.etherescan.io donde podrás ver los detalles de la transacción (publicación del Smart Contract). Se puede observar que el contrato ha sido creado en la siguiente dirección: `0xc5bccf767704432a3a22318a0df3067d9a3fc217`. Esta misma dirección servirá para hacer su posterior verificación.
 
-![image-20221002070341543](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002070341543.png)
+![image-20221002070341543](https://user-images.githubusercontent.com/3300958/193496993-ecfc7741-1d7e-4e69-a7ec-2e07f0b593b3.png)
 
 _Verificación de un Smart Contract_
 
 1. Para verificar, hacer click en la dirección del contrato creado en el anterior paso. O en su defecto, ir al siguiente link `https://goerli.etherscan.io/address/0xc5bccf767704432a3a22318a0df3067d9a3fc217`, del cual la última parte será reemplazada por la dirección (address) de tu contrato.
 
-![image-20221002071148343](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002071148343.png)
+![image-20221002071148343](https://user-images.githubusercontent.com/3300958/193496991-3ff9fb42-5b9b-4442-8e88-30999e588e1e.png)
 
 2. Hacer click en la pestaña `Contract` que te permitirá ver el bytecode generado del Smart Contract. Para verificar, hacer clic en `Verify and Publish`.
 
-![image-20221002072149755](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002072149755.png)
+![image-20221002072149755](https://user-images.githubusercontent.com/3300958/193496987-b6646c29-213c-470d-a925-2fe2a33a7a07.png)
 
 3. Se abrirá una lista de opciones que tienen que ser llenadas de la siguiente manera: address del smart contract, Single File, versión del compilador (debe ser la misma usada en Remix), MIT de licencia.
 
-![image-20221002072916426](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002072916426.png)
+![image-20221002072916426](https://user-images.githubusercontent.com/3300958/193496585-8fbdb073-48b2-407c-8308-45be845286d1.png)
 
 4. En esta ventana copias y pegas el código de Remix. Verificas el CAPTCHA. Luego clic en `Verify and Publish`.
 
-![image-20221002074129280](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002074129280.png)
+![image-20221002074129280](https://user-images.githubusercontent.com/3300958/193496578-46b72f49-0855-4915-acfb-67d2c78d3832.png)
 
 4. Si todos los valores fueron incluidos correctamente, se verá el siguiente resultado:
 
-![image-20221002073334433](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002073334433.png)
+![image-20221002073334433](https://user-images.githubusercontent.com/3300958/193496583-67848f32-7e90-48a2-b7dc-b727020e191a.png)
 
 6. Al dirigirte a tu contrato en Goerli.etherscan.io con el siguiente link `https://goerli.etherscan.io/address/0xc5bccf767704432a3a22318a0df3067d9a3fc217`, del cual la última parte será reemplazada por la dirección (address) de tu contrato, podrás (1) encontrar el código del Smart Contract, (2) interactuar con el contrato directamente (`Read Contract` y `Write Contract`) y (3) observar otros detalles del mismo.
 
-![image-20221002073616250](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002073616250.png)
+![image-20221002073616250](https://user-images.githubusercontent.com/3300958/193496581-80b79e6a-78df-4718-9c28-fb779aaabf85.png)
 
-*Hash table en contratos inteligentes*
+_Hash table en contratos inteligentes_
 
 La estructura de datos llamado mapping es uno de los más usados en Solidity. `mapping(_KeyType => _ValueType)` Es el equivalente a un Hash Table o un objeto (`var obj = {}`) en Javascript. A cada `key` le corresopnde un `value` dentro del mapping.
 
-![image-20221002122245338](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20221002122245338.png)
+![image-20221002122245338](https://user-images.githubusercontent.com/3300958/193496570-606c0ff9-4e69-4fe0-92af-24c07e9de6c0.png)
 
 `_KeyType` no puede ser otro mapping, struct o array. `_ValueType` puede ser de cualquier tipo, incluyendo mapping, arrays y structs.
 
-Un `mapping` empieza con una inicialización de todos los posibles valores de `_KeyType` que están mapeados a un valor por defecto que es 0. Además, con `mapping` no se lleva la cuenta de los keys cuyos valores sea 0. Ello justamente impide que no se pueda borrar un `mapping` a menos que se sepa el `key`. 
+Un `mapping` empieza con una inicialización de todos los posibles valores de `_KeyType` que están mapeados a un valor por defecto que es 0. Además, con `mapping` no se lleva la cuenta de los keys cuyos valores sea 0. Ello justamente impide que no se pueda borrar un `mapping` a menos que se sepa el `key`.
 
-Los `mapping`s solo pueden tener un tipo de ubicación de información: `storage`. No se pueden usar `mapping`s como parámetros de una función o como el valor de retorno. 
+Los `mapping`s solo pueden tener un tipo de ubicación de información: `storage`. No se pueden usar `mapping`s como parámetros de una función o como el valor de retorno.
 
 Un `mapping` no tiene longitud (`length`), como lo puede tener un array. Un `mapping` tampoco es iterable porque no hay manera de conocer sus `key`s mediante ningún método. Se puede guardar las llaves del `mapping` en otro array para poder iterar luego.
 
@@ -435,9 +435,9 @@ contract MiPrimerContrato {
 }
 ```
 
-*El tipo de data `Address`*
+_El tipo de data `Address`_
 
-Cada EOA (externally owned account) y Smart Contract Account tiene una dirección (`address`). Se guarda como un valor de 20 bytes (160 bits o 40 caractéres hexadecimales). Siempre se le prefija el `0x` por el formato hexadecimal. Es usado para enviar y recibir Ether, así como también otras criptomonedas no nativas. 
+Cada EOA (externally owned account) y Smart Contract Account tiene una dirección (`address`). Se guarda como un valor de 20 bytes (160 bits o 40 caractéres hexadecimales). Siempre se le prefija el `0x` por el formato hexadecimal. Es usado para enviar y recibir Ether, así como también otras criptomonedas no nativas.
 
 Ejemplo: 0x5387ddeec8ddC004a217d8e172241EB5F900B302
 
@@ -478,7 +478,7 @@ contract MiPrimerContrato {
 }
 ```
 
-El método `setEdadPorAddress` nos ayuda a maper un `address` a una `edad` en particular. 
+El método `setEdadPorAddress` nos ayuda a maper un `address` a una `edad` en particular.
 
 Cabe resaltar que la palabra clave `public` se ha utilizado cuando se define el mapping de `edadPorAddress`. Al usar esta palabra clave, Solidity, automáticamente, ha creado un getter. Sin la palabra clave `public`, se tendría que añadir el siguiente código:
 
@@ -488,11 +488,11 @@ Cabe resaltar que la palabra clave `public` se ha utilizado cuando se define el 
     }
 ```
 
-*Propagación de un Error vía `require` o `revert`*
+_Propagación de un Error vía `require` o `revert`_
 
 `require` o `revert` en Solidity es usado para validar ciertas condiciones dentro del código y lanzar una excepción si dicha condición no es cumplida. Esto es importante para prevenir la finalización de una transacción si se detecta una condición indeseada.
 
-Cabe mencionar que esta propagación del error será notada por el usuario en el front-end (dApp) antes de firmar una transacción mediante su billetera (de Metamask u otra). 
+Cabe mencionar que esta propagación del error será notada por el usuario en el front-end (dApp) antes de firmar una transacción mediante su billetera (de Metamask u otra).
 
 Veamos cómo aplicamos `require` o `revert` en el código:
 
@@ -523,11 +523,11 @@ contract MiPrimerContrato {
 
 `revert` y `require` propagarán el error si es que no cumple las condiciones allí definidas. La única diferencia entre uno y otro es que `require` lleva el condicional y el mensaje de error como argumentos de un método. En cambio, `revert` ofrece mayor flexibilidad para validar y plantear las condiciones a cumplir. `revert` solo lleva como argumento el mensaje del error.
 
-*Usando eventos a modo de notificación*
+_Usando eventos a modo de notificación_
 
 `Events` dentro de Solidity son disparados cuando algún metodo en particular es ejecutado. Los eventos pueden llevar información adicional para explicar lo que esá sucediendo. Normalmente, el nombre del evento seguido de la información que contiene, explica muy bien un suceso dentro del blockchain.
 
-Los eventos disparados desde un Smart Contract son prograpagos en el Blockchain. Dichos eventos quedan registrados por siempre. En un futuro se pueden hacer queries de eventos disparados anteriormente. Incluso se puede usar para almacenar información de manera económica. Estos eventos pueden ser captados desde el front-end en un dApp si se establece una conexión. 
+Los eventos disparados desde un Smart Contract son prograpagos en el Blockchain. Dichos eventos quedan registrados por siempre. En un futuro se pueden hacer queries de eventos disparados anteriormente. Incluso se puede usar para almacenar información de manera económica. Estos eventos pueden ser captados desde el front-end en un dApp si se establece una conexión.
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -573,7 +573,7 @@ contract MiPrimerContrato {
 }
 ```
 
-*Consideraciones para la creación de una criptomoneda*
+_Consideraciones para la creación de una criptomoneda_
 
 Comenzaremos con la creación de una criptomoneda desde cero. Sin librerías. En la actualidad se crean critptomonedas con diez líneas de código. Como desarrolladores, es imporante conocer el funcionamiento interno. Más adelante, utilizaremos librerías que acelaran el proceso mediante templates testeados y auditados. Repasemos los elementos esenciales de todo token (escrito en código en un Smart Contract):
 
