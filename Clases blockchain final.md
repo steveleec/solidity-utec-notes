@@ -108,7 +108,7 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 
 ## **Ethereum Virtual Machine**
 
-**_Ambiente virtual_**
+***Ambiente virtual***
 
 EVM significa Máquina Virtual de Ethereum. En simple, EVM es el sistema operativo de Ethereum. Dentro de esto, una máquina virtual puede proporcionar un entorno de ejecución para ejecutar contratos inteligentes.
 
@@ -116,11 +116,11 @@ Por lo general, una vez que se compila un contrato inteligente, genera dos salid
 
 Existen diferentes lenguajes de programación que pueden ser entendidos por la EVM (Solidity, Vyper, etc.).
 
-**_Computadora Mundial_**
+***Computadora Mundial***
 
 La máquina virtual de Ethereum funciona como una sola entidad mantenida por miles de computadoras interconectadas llamadas nodos, que también se conoce como la computadora mundial. Estas computadoras ejecutan una implementación del cliente Ethereum y tienen una estructura de igual a igual (Peer to Peer - P2P). Su trabajo principal es procesar y validar transacciones, así como asegurar y estabilizar todo el ecosistema. Por eso, el EVM podría verse como un motor de procesamiento y una plataforma de software que utiliza computación descentralizada.
 
-**_Estado de la cadena de bloques_**
+***Estado de la cadena de bloques***
 
 Dentro de la EVM se definen las reglas para crear un nuevo estado válido de bloque a bloque. Una vez que se ejecutan los contratos inteligentes, el EVM calcula el nuevo estado de la red después de agregar un nuevo bloque a la cadena. En cualquier momento dado, la EVM tiene un y solo un estado 'canónico'. Es en este entorno que viven las cuentas de Ethereum y los contratos inteligentes. El protocolo Ethereum tiene como objetivo mantener esta máquina especial realizando operaciones ininterrumpidas.
 
@@ -489,7 +489,7 @@ Cabe resaltar que la palabra clave `public` se ha utilizado cuando se define el 
     }
 ```
 
-**_Propagación de un Error vía `require` o `revert`_**
+***Propagación de un Error vía `require` o `revert`***
 
 `require` o `revert` en Solidity es usado para validar ciertas condiciones dentro del código y lanzar una excepción si dicha condición no es cumplida. Esto es importante para prevenir la finalización de una transacción si se detecta una condición indeseada.
 
@@ -578,14 +578,303 @@ contract MiPrimerContrato {
 
 Comenzaremos con la creación de una criptomoneda desde cero. Sin librerías. En la actualidad se crean critptomonedas con diez líneas de código. Como desarrolladores, es imporante conocer el funcionamiento interno. Más adelante, utilizaremos librerías que acelaran el proceso mediante templates testeados y auditados. Repasemos los elementos esenciales de todo token (escrito en código en un Smart Contract):
 
-1. Una criptomoneda debería tener un nombre que lo identifique
-2. Una criptomoneda debería tener un símbolo que lo identifique
-3. Definir la cantidad de decimales del token (normalmente hay 18 pero otros tokens tienen 6, como el USDC)
-4. Internamente debería llevar la cuenta de los balances de cada persona que tiene criptomoneda
-5. Llevar la cuenta del total de tokens repartidos
-6. Método que permite la acuñación de tokens a favor de una cuenta en particular (`mint`)
-7. Método que permite quemar (burn) tokens. La lógica detrás de esto es que genera deflación (menos dinero en la economía)
-8. Método que permite transferir tus propios tokens a una segunda persona (método `transfer`)
-9. Método que permite transferir tokens en nombre de una segunda persona con previa aprobación de la segunda persona (método `transferFrom`)
-10. Llevar la cuenta de los balances de tokens a gastar que los mismos dueños (del token) han autorizado a otras cuentas para gastar en su representación
-11. Disparar eventos de Transferencia cada vez que se transfieren tokens de un lado a otro. Dispararar eventos de Aprobación cada vez que una cuenta le da permiso a otra para gastar sus tokens
+1. Una criptomoneda debería tener un <u>nombre</u> que lo identifique
+2. Una criptomoneda debería tener un <u>símbolo</u> que lo identifique
+3. Definir la cantidad de <u>decimales</u> del token (normalmente hay 18 pero otros tokens tienen 6, como el USDC)
+4. Internamente debería llevar la <u>cuenta de los balances</u> de cada persona que tiene criptomoneda
+5. Llevar la <u>cuenta del total de tokens</u> repartidos
+6. Método que permite la <u>acuñación</u> de tokens a favor de una cuenta en particular (`mint`)
+7. Método que permite <u>quemar</u> (burn) tokens. La lógica detrás de esto es que genera deflación (menos dinero en la economía)
+8. Método que permite <u>transferir</u> tus propios tokens a una segunda persona (método `transfer`)
+      * Internamente validar que el usuario tiene más tokens de los que quiere enviar
+9. Llevar la cuenta de los balances de tokens a gastar que los mismos dueños (del token) han <u>autorizado a otras cuentas para gastar</u> en su representación
+10. Método que permite <u>transferir tokens en nombre</u> de una segunda persona con previa aprobación de la segunda persona (método `transferFrom`)
+      * Validar que esa segunda persona tiene más tokens de lo que se planea enviar
+
+11. Definir métodos para incrementar el permiso de gastar tokens de otra persona
+12. Disparar eventos de Transferencia cada vez que se transfieren tokens de un lado a otro. Dispararar eventos de Aprobación cada vez que una cuenta le da permiso a otra para gastar sus tokens 
+13. Método para visualizar el total de tokens de una cuenta
+14. Método para visualizar la cantidad de tokens a gastar en nombre de otra persona con su previo permiso
+
+A continuación se muestra el primer borrador en base a las consideraciones expuestas:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+contract ERC20Generic {
+    /**
+      1. Una criptomoneda debería tener un <u>nombre</u> que lo identifique
+      2. Una criptomoneda debería tener un <u>símbolo</u> que lo identifique
+      3. Definir la cantidad de <u>decimales</u> del token (normalmente hay 18 pero otros tokens tienen 6, como el USDC)
+      4. Internamente debería llevar la <u>cuenta de los balances</u> de cada persona que tiene criptomoneda
+      5. Llevar la <u>cuenta del total de tokens</u> repartidos
+      6. Método que permite la <u>acuñación</u> de tokens a favor de una cuenta en particular (`mint`)
+      7. Método que permite <u>quemar</u> (burn) tokens. La lógica detrás de esto es que genera deflación (menos dinero en la economía)
+      8. Método que permite <u>transferir</u> tus propios tokens a una segunda persona (método `transfer`)
+          * Internamente validar que el usuario tiene más tokens de los que quiere enviar
+      9. Llevar la cuenta de los balances de tokens a gastar que los mismos dueños (del token) han <u>autorizado a otras cuentas para gastar</u> en su representación
+      10. Método que permite <u>transferir tokens en nombre</u> de una segunda persona con previa aprobación de la segunda persona (método `transferFrom`)
+          * Validar que esa segunda persona tiene más tokens de lo que se planea enviar
+      11. Definir métodos para incrementar el permiso de gastar tokens de otra persona
+      12. Disparar eventos de Transferencia cada vez que se transfieren tokens de un lado a otro. Dispararar eventos de Aprobación cada vez que una cuenta le da permiso a otra para gastar sus tokens 
+      13. Método para visualizar el total de tokens de una cuenta
+      14. Método para visualizar la cantidad de tokens a gastar en nombre de otra persona con su previo permiso
+   */
+
+    //   5. Llevar la <u>cuenta del total de tokens</u> repartidos
+    uint256 totalSupply;
+
+    //   4. Internamente debería llevar la <u>cuenta de los balances</u> de cada persona que tiene criptomoneda
+    //      Es decir, a cada billetere se le debe asociar la cantidad de tokens que tiene
+    mapping(address => uint256) balances;
+
+    //   9. Llevar la cuenta de los balances de tokens a gastar que los mismos dueños (del token) han <u>autorizado a otras cuentas para gastar</u> en su representación
+    mapping(address => mapping(address => uint256)) _allowances; // permisos
+
+    //   12. Disparar eventos de Transferencia cada vez que se transfieren tokens de un lado a otro. Dispararar eventos de Aprobación cada vez que una cuenta le da permiso a otra para gastar sus tokens
+    event Transfer(address from, address to, uint256 value);
+
+    //   1. Una criptomoneda debería tener un <u>nombre</u> que lo identifique
+    function name() public pure returns (string memory) {
+        return "My primer token";
+    }
+
+    //   2. Una criptomoneda debería tener un <u>símbolo</u> que lo identifique
+    function symbol() public pure returns (string memory) {
+        return "MPTK";
+    }
+
+    //   3. Definir la cantidad de <u>decimales</u> del token (normalmente hay 18 pero otros tokens tienen 6, como el USDC)
+    function decimals() public pure returns (uint256) {
+        return 18;
+    }
+
+    //   6. Método que permite la <u>acuñación</u> de tokens a favor de una cuenta en particular (`mint`)
+    //      Los parámetros son la billetera (address) que recibirá los tokens y la cantidad de tokens
+    function mint(address _account, uint256 _amount) public {
+        totalSupply += _amount;
+        balances[_account] += _amount;
+
+        emit Transfer(address(0), _account, _amount);
+    }
+
+    // 7. Método que permite <u>quemar</u> (burn) tokens. La lógica detrás de esto es que genera deflación (menos dinero en la economía)
+    function burn(address _account, uint256 _amount) public {
+        totalSupply -= _amount;
+        balances[_account] -= _amount;
+        emit Transfer(_account, address(0), _amount);
+    }
+
+    // 8. Método que permite <u>transferir</u> tus propios tokens a una segunda persona (método `transfer`)
+    function transfer(address _account, uint256 _amount) public {
+        balances[msg.sender] -= _amount;
+        balances[_account] += _amount;
+
+        emit Transfer(msg.sender, _account, _amount);
+    }
+
+    //   10. Método que permite <u>transferir tokens en nombre</u> de una segunda persona con previa aprobación de la segunda persona (método `transferFrom`)
+    //       Lleva parámetros
+    //       - la cuenta de la persona que autorizó la transferencia
+    //       - La cuenta de la emprepsa que recibirá los toens
+    //       - la cantidad de tokens ser transferidos
+    function transferFrom(
+        address _sender,
+        address _recipient,
+        uint256 _amount
+    ) public {
+        // verificar permiso
+        uint256 allowance_ = _allowances[_sender][msg.sender];
+        require(allowance_ >= _amount, "No tiene permiso");
+
+        // tranferir entre dos cuentas
+        balances[_sender] -= _amount;
+        balances[_recipient] += _amount;
+
+        _allowances[_sender][msg.sender] = allowance_ - _amount;
+    }
+
+    //   11. Definir métodos para incrementar el permiso de gastar tokens de otra persona
+    //       Este método solo puede ser llamado por la persona que desea otorgar el permiso a otra
+    function approve(address spender, uint256 amount) public returns (bool) {
+        _allowances[msg.sender][spender] = amount;
+        return true;
+    }
+
+    // 13. Método para visualizar el total de tokens de una cuenta
+    function balanceOf(address _account) public view returns (uint256) {
+        return balances[_account];
+    }
+
+    // 14. Método para visualizar la cantidad de tokens a gastar en nombre de otra persona con su previo permiso
+    function allowance(address _owner, address _spender)
+        public
+        view
+        returns (uint256)
+    {
+        return _allowances[_owner][_spender];
+    }
+}
+```
+
+Publicar y verificar el Smart Contract en la red Goerli Testnet del mismo modo que se publicó [aquí](https://goerli.etherscan.io/address/0x94591A9A48eF62737017BCF5dA7e89F354e99D3c#code).
+
+Sin embargo, este Smart Contract no tiene las verificaciones necesarias y requeridas para evitar errores. Por ejemplo, no se verifica si un usuario antes de transferir tokens, tenga el balance suficiente. Tampoco se verifica que en una transferencia, el destinatario sea una cuenta sin llave privada. A continuación se muestra un Smart Contract que hace exactamente lo mismo que el anterio y además incluyes las validaciones necesarias:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+contract ERC20Generic {
+    uint256 totalSupply;
+
+    mapping(address => uint256) balances;
+    mapping(address => mapping(address => uint256)) _allowances; // permisos
+
+    event Transfer(address from, address to, uint256 value);
+    event Approval(address owner, address spender, uint256 value);
+
+    function name() public pure returns (string memory) {
+        return "My primer token";
+    }
+
+    function symbol() public pure returns (string memory) {
+        return "MPTK";
+    }
+
+    function decimals() public pure returns (uint256) {
+        return 18;
+    }
+
+    // 1. Esta función está expuesta para ser llamada por cualquier persona
+    //    Solo cuentas (addresses) con privilegios deberían poder llamar el método de acuñación de tokens
+    //    Vamos a convertirla a una función 'interna', es decir, que solo puede ser usada dentro del Smart Contract y no llamada públicamente
+    //    Más adelante aprenderemos sobre 'modifiers' para poder otorgar privilegios de ejecución a ciertas cuenntas (addresses)
+    // 2. Es una buena práctica verificar que el destinatario no sea un address sin llave privada (e.g. address(0) === 0x000000...000)
+    function _mint(address _account, uint256 _amount) internal {
+        // 2. Es una buena práctica verificar que el destinatario no sea un address sin llave privada (e.g. address(0) === 0x000000...000)
+        require(_account != address(0), "Mint to the zero address");
+
+        totalSupply += _amount;
+        balances[_account] += _amount;
+
+        emit Transfer(address(0), _account, _amount);
+    }
+
+    // 1. Con este método se pueden quemar los tokens de cualquier cuenta
+    //    Vamos a convertir este método en una función interna
+    // 2. Validar que no se estén quemando los tokens del address(0)
+    // 3. Vamos a validar que la cuenta tenga la cantidad suficiente de tokens para quemar
+    function _burn(address _account, uint256 _amount) internal {
+        // 2. Validar que no se estén quemando los tokens del address(0)
+        require(_account != address(0), "Burn from the zero address");
+
+        uint256 balance_ = balances[_account];
+        require(balance_ >= _amount, "Not enough tokens to burn");
+
+        totalSupply -= _amount;
+        balances[_account] -= _amount;
+        emit Transfer(_account, address(0), _amount);
+    }
+
+    // Solución al burn sin protección
+    // _burn es una función más generica pero interna
+    // burn obliga a que el que llama el método (msg.sender), se vea afecatdo. Método público
+    function burn(uint256 _amount) public {
+        _burn(msg.sender, _amount);
+    }
+
+    // 1. Es buena práctica verificar que el que envia y el que recibe no sean un address sin clave privada (e.g. address(0))
+    // 2. El que envía los tokens debería tener la suficiente cantidad de tokens
+    function transfer(address _to, uint256 _amount) public returns (bool) {
+        // 1. Es buena práctica verificar que el que envia y el que recibe no sean un address sin clave privada (e.g. address(0))
+        require(_to != address(0), "Sending to zero address");
+
+        // 2. El que envía los tokens debería tener la suficiente cantidad de tokens
+        uint256 senderBalance = balances[msg.sender];
+        require(senderBalance >= _amount, "Sender does not enough tokens");
+
+        balances[msg.sender] -= _amount;
+        balances[_to] += _amount;
+
+        emit Transfer(msg.sender, _to, _amount);
+        // _transfer(msg.sender, _to, _amount);
+
+        return true;
+    }
+
+    // 1. Es buena práctica verificar que el que envia y el que recibe no sean un address sin clave privada (e.g. address(0))
+    // 2. De la persona que se envía los tokens, debería tener la suficiente cantidad de tokens
+    function transferFrom(
+        address _sender,
+        address _recipient,
+        uint256 _amount
+    ) public {
+        // verificar permiso
+        uint256 allowance_ = _allowances[_sender][msg.sender];
+        require(
+            allowance_ >= _amount,
+            "No hay permiso para manejar esta cantidad de tokens"
+        );
+
+        // 1. Es buena práctica verificar que el que envia y el que recibe no sean un address sin clave privada (e.g. address(0))
+        require(_sender != address(0), "Sending from zero address");
+        require(_recipient != address(0), "Sending to zero address");
+
+        // 2. De la persona que se envía los tokens, debería tener la suficiente cantidad de tokens
+        uint256 senderBalance = balances[_sender];
+        require(senderBalance >= _amount, "Sender does not enough tokens");
+
+        // tranferir entre dos cuentas
+        balances[_sender] -= _amount;
+        balances[_recipient] += _amount;
+
+        emit Transfer(_sender, _recipient, _amount);
+        // _transfer(_sender, _recipient, _amount);
+
+        // disminuir la cantidad del permiso de tokens otorgados
+        _allowances[_sender][msg.sender] = allowance_ - _amount;
+    }
+
+    //  Los métodos 'transfer' y 'transferFrom' repiten código que puede ser abstraído en '_transfer', un método interno
+    function _transfer(
+        address _sender,
+        address _recipient,
+        uint256 _amount
+    ) internal {
+        require(_sender != address(0), "Sending from zero address");
+        require(_recipient != address(0), "Sending to zero address");
+
+        uint256 senderBalance = balances[_sender];
+        require(senderBalance >= _amount, "Sender does not enough tokens");
+
+        balances[_sender] -= _amount;
+        balances[_recipient] += _amount;
+
+        emit Transfer(_sender, _recipient, _amount);
+    }
+
+    // Este método es llamado por la persona que desee dar el permiso a otra cuenta
+    // Es buena práctica no darle permiso a una cuenta sin llave privada (address(0))
+    function approve(address spender, uint256 amount) public returns (bool) {
+        require(spender != address(0), "Spender is address zero");
+        _allowances[msg.sender][spender] = amount;
+        emit Approval(msg.sender, spender, amount);
+        return true;
+    }
+
+    function balanceOf(address _account) public view returns (uint256) {
+        return balances[_account];
+    }
+
+    function allowance(address _owner, address _spender)
+        public
+        view
+        returns (uint256)
+    {
+        return _allowances[_owner][_spender];
+    }
+}
+```
+
