@@ -29,7 +29,7 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 
 **<u>Cuy Token</u>**
 
-![image](/Users/steveleec/Documents/UTEC/repo-notes/Classes blockchain.assets/image-20220930232557988.png)
+![image](https://user-images.githubusercontent.com/3300958/193497021-8c2b7c80-0e54-455f-94aa-3fb03e23a651.png)
 
 - Sinopsis: Vender el token para poder otorgar préstamos a diferentes tipos de proyectos con potencial. El primer proyecto financiado fue Pachacuy que logró recaudar 30,000 USD por su propia cuenta.
 - Criptomoneda creada usando el estándar ERC20
@@ -108,7 +108,7 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 
 ## **Ethereum Virtual Machine**
 
-***Ambiente virtual***
+**_Ambiente virtual_**
 
 EVM significa Máquina Virtual de Ethereum. En simple, EVM es el sistema operativo de Ethereum. Dentro de esto, una máquina virtual puede proporcionar un entorno de ejecución para ejecutar contratos inteligentes.
 
@@ -116,11 +116,11 @@ Por lo general, una vez que se compila un contrato inteligente, genera dos salid
 
 Existen diferentes lenguajes de programación que pueden ser entendidos por la EVM (Solidity, Vyper, etc.).
 
-***Computadora Mundial***
+**_Computadora Mundial_**
 
 La máquina virtual de Ethereum funciona como una sola entidad mantenida por miles de computadoras interconectadas llamadas nodos, que también se conoce como la computadora mundial. Estas computadoras ejecutan una implementación del cliente Ethereum y tienen una estructura de igual a igual (Peer to Peer - P2P). Su trabajo principal es procesar y validar transacciones, así como asegurar y estabilizar todo el ecosistema. Por eso, el EVM podría verse como un motor de procesamiento y una plataforma de software que utiliza computación descentralizada.
 
-***Estado de la cadena de bloques***
+**_Estado de la cadena de bloques_**
 
 Dentro de la EVM se definen las reglas para crear un nuevo estado válido de bloque a bloque. Una vez que se ejecutan los contratos inteligentes, el EVM calcula el nuevo estado de la red después de agregar un nuevo bloque a la cadena. En cualquier momento dado, la EVM tiene un y solo un estado 'canónico'. Es en este entorno que viven las cuentas de Ethereum y los contratos inteligentes. El protocolo Ethereum tiene como objetivo mantener esta máquina especial realizando operaciones ininterrumpidas.
 
@@ -436,6 +436,70 @@ contract MiPrimerContrato {
 }
 ```
 
+El doble mapping es Smart Contracts es usando frecuentemente y cabe ahondar en su entendimiento y uso. Veamos el siguiente ejemplo:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.4.16 <0.9.0;
+
+contract DoubleMapping {
+    // Queremos llevar una contabilidad de las deudas de cada persona (usando su nombre)
+    // Esto requiere de un simple 'mapping' que asocia string => uint256
+    mapping(string => uint256) saldos;
+
+    function fijarSaldo(string memory _name, uint256 _saldo) public {
+        saldos[_name] = _saldo;
+    }
+
+    function leerSaldo(string memory _name) public view returns (uint256) {
+        return saldos[_name];
+    }
+
+    /**
+     Realizar las siguientes operaciones
+     1. Registrar que Lee tiene un saldo de 10,000
+     2. Registrar que Jen tiene un saldo de 100,000
+
+     Desarrollo:
+     fijarSaldo("Lee", 10000)
+     fijarSaldo("Jen", 100000)
+     */
+
+    // Queremos llevar la contabilidad de cuanto debe una persona a otra usando su nombre
+    // Esto require de un doble mapping porque una persona puede deber a varias personas
+    //  Lee -> Carmen: debe 100
+    //  Lee -> Jen: debe 200
+    //  Lee -> Lea: debe 300
+    //  Carmen -> Lee: 200
+    //  Carmen -> Jhon: 400
+    mapping(string => mapping(string => uint256)) saldosMatrix;
+
+    function fijarSaldoMatrix(
+        string memory acreedor, // al que se le debe
+        string memory deudor, // el que debe
+        uint256 amount
+    ) public {
+        saldosMatrix[acreedor][deudor] = amount;
+    }
+
+    function leerSaldoMatrix(
+        string memory acreedor, // al que se le debe
+        string memory deudor // el que debe
+    ) public view returns (uint256) {
+        return saldosMatrix[acreedor][deudor];
+    }
+
+    /**
+     Desarrollo:
+        fijarSaldoMatrix("Carmen", "Lee", 100);
+        fijarSaldoMatrix("Jen", "Lee", 200);
+        fijarSaldoMatrix("Lea", "Lee", 300);
+        fijarSaldoMatrix("Lee", "Carmen", 200);
+        fijarSaldoMatrix("Jhon", "Carmen", 400);
+     */
+}
+```
+
 **_El tipo de data `Address`_**
 
 Cada EOA (externally owned account) y Smart Contract Account tiene una dirección (`address`). Se guarda como un valor de 20 bytes (160 bits o 40 caractéres hexadecimales). Siempre se le prefija el `0x` por el formato hexadecimal. Es usado para enviar y recibir Ether, así como también otras criptomonedas no nativas.
@@ -489,7 +553,7 @@ Cabe resaltar que la palabra clave `public` se ha utilizado cuando se define el 
     }
 ```
 
-***Propagación de un Error vía `require` o `revert`***
+**_Propagación de un Error vía `require` o `revert`_**
 
 `require` o `revert` en Solidity es usado para validar ciertas condiciones dentro del código y lanzar una excepción si dicha condición no es cumplida. Esto es importante para prevenir la finalización de una transacción si se detecta una condición indeseada.
 
@@ -586,13 +650,14 @@ Comenzaremos con la creación de una criptomoneda desde cero. Sin librerías. En
 6. Método que permite la <u>acuñación</u> de tokens a favor de una cuenta en particular (`mint`)
 7. Método que permite <u>quemar</u> (burn) tokens. La lógica detrás de esto es que genera deflación (menos dinero en la economía)
 8. Método que permite <u>transferir</u> tus propios tokens a una segunda persona (método `transfer`)
-      * Internamente validar que el usuario tiene más tokens de los que quiere enviar
+   - Internamente validar que el usuario tiene más tokens de los que quiere enviar
 9. Llevar la cuenta de los balances de tokens a gastar que los mismos dueños (del token) han <u>autorizado a otras cuentas para gastar</u> en su representación
 10. Método que permite <u>transferir tokens en nombre</u> de una segunda persona con previa aprobación de la segunda persona (método `transferFrom`)
-      * Validar que esa segunda persona tiene más tokens de lo que se planea enviar
+
+    - Validar que esa segunda persona tiene más tokens de lo que se planea enviar
 
 11. Definir métodos para incrementar el permiso de gastar tokens de otra persona
-12. Disparar eventos de Transferencia cada vez que se transfieren tokens de un lado a otro. Dispararar eventos de Aprobación cada vez que una cuenta le da permiso a otra para gastar sus tokens 
+12. Disparar eventos de Transferencia cada vez que se transfieren tokens de un lado a otro. Dispararar eventos de Aprobación cada vez que una cuenta le da permiso a otra para gastar sus tokens
 13. Método para visualizar el total de tokens de una cuenta
 14. Método para visualizar la cantidad de tokens a gastar en nombre de otra persona con su previo permiso
 
@@ -617,7 +682,7 @@ contract ERC20Generic {
       10. Método que permite <u>transferir tokens en nombre</u> de una segunda persona con previa aprobación de la segunda persona (método `transferFrom`)
           * Validar que esa segunda persona tiene más tokens de lo que se planea enviar
       11. Definir métodos para incrementar el permiso de gastar tokens de otra persona
-      12. Disparar eventos de Transferencia cada vez que se transfieren tokens de un lado a otro. Dispararar eventos de Aprobación cada vez que una cuenta le da permiso a otra para gastar sus tokens 
+      12. Disparar eventos de Transferencia cada vez que se transfieren tokens de un lado a otro. Dispararar eventos de Aprobación cada vez que una cuenta le da permiso a otra para gastar sus tokens
       13. Método para visualizar el total de tokens de una cuenta
       14. Método para visualizar la cantidad de tokens a gastar en nombre de otra persona con su previo permiso
    */
@@ -877,4 +942,3 @@ contract ERC20Generic {
     }
 }
 ```
-
