@@ -108,7 +108,7 @@ A continuación es una lista de projectos en los que trabajo de princpio a fin. 
 
 ## **Ethereum Virtual Machine**
 
-**_Ambiente virtual_**
+***Ambiente virtual***
 
 EVM significa Máquina Virtual de Ethereum. En simple, EVM es el sistema operativo de Ethereum. Dentro de esto, una máquina virtual puede proporcionar un entorno de ejecución para ejecutar contratos inteligentes.
 
@@ -116,11 +116,11 @@ Por lo general, una vez que se compila un contrato inteligente, genera dos salid
 
 Existen diferentes lenguajes de programación que pueden ser entendidos por la EVM (Solidity, Vyper, etc.).
 
-**_Computadora Mundial_**
+***Computadora Mundial***
 
 La máquina virtual de Ethereum funciona como una sola entidad mantenida por miles de computadoras interconectadas llamadas nodos, que también se conoce como la computadora mundial. Estas computadoras ejecutan una implementación del cliente Ethereum y tienen una estructura de igual a igual (Peer to Peer - P2P). Su trabajo principal es procesar y validar transacciones, así como asegurar y estabilizar todo el ecosistema. Por eso, el EVM podría verse como un motor de procesamiento y una plataforma de software que utiliza computación descentralizada.
 
-**_Estado de la cadena de bloques_**
+***Estado de la cadena de bloques***
 
 Dentro de la EVM se definen las reglas para crear un nuevo estado válido de bloque a bloque. Una vez que se ejecutan los contratos inteligentes, el EVM calcula el nuevo estado de la red después de agregar un nuevo bloque a la cadena. En cualquier momento dado, la EVM tiene un y solo un estado 'canónico'. Es en este entorno que viven las cuentas de Ethereum y los contratos inteligentes. El protocolo Ethereum tiene como objetivo mantener esta máquina especial realizando operaciones ininterrumpidas.
 
@@ -319,9 +319,11 @@ El primer Smart Contract que vamos a desarrollar será la criptomoneda (token ER
 ![image-20221001222155465](https://user-images.githubusercontent.com/3300958/193497001-1ad024fe-ed54-4ead-a926-b45d7c58bdb1.png)
 
 - EOA (Externally owned account): Son usuarios (personas) que posee una llave privada. No posee código. Pueden mantener un balance positivo de Ether. Firma transacciones. Puede transferir activos (assets).
-- CA (Contract Account): Son cuentas controladas por código dentro del Smart Contract.
+- SCA (Smart Contract Account): Son cuentas controladas por código dentro del Smart Contract.
 
 **_Mi primer contrato en Solidity_**
+
+1_MyFirstContract
 
 En [Remix](https://remix.ethereum.org/), crear un nuevo archivo llamada
 
@@ -412,6 +414,8 @@ Un `mapping` no tiene longitud (`length`), como lo puede tener un array. Un `map
 
 En el siguiente ejemplo se incluye un `mapping` para guardar una lista de saludos en el cual el `_KeyType` se va incrementando en uno a medida que la función `set` es llamada.
 
+2_Mapping
+
 ```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.4.16 <0.9.0;
@@ -436,7 +440,70 @@ contract MiPrimerContrato {
 }
 ```
 
-El doble mapping es Smart Contracts es usando frecuentemente y cabe ahondar en su entendimiento y uso. Veamos el siguiente ejemplo:
+**_El tipo de data `Address`_**
+
+Cada EOA (externally owned account) y Smart Contract Account tiene una dirección (`address`). Se guarda como un valor de 20 bytes (160 bits o 40 caractéres hexadecimales). Siempre se le prefija el `0x` por el formato hexadecimal. Es usado para enviar y recibir Ether, así como también otras criptomonedas no nativas.
+
+Ejemplo: 0x5387ddeec8ddC004a217d8e172241EB5F900B302
+
+Puede ser considerado como una indentidad pública en el Blockchain, más como un seudónimo. Para ser más preciso, se puede entender como una cuenta de banco. En el mismo modo en que necesitas una cuenta de banco para recibir y enviar dinero, se usará el `address` para enviar y/o recibir dinero, además de realizar transacciones.
+
+En lo sucesivo se usará `address` como identificador único de un usuario involucrado en realizar alguna transacción dentro del Smart Contract.
+
+Supongamos que deseamos asociar la edad (`uint256`) de cada usuario con su `address`. Para ello usaremos un mapping:
+
+3_MappingEdad
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.4.16 <0.9.0;
+
+contract MiPrimerContrato {
+    string saludo; // empieza como un string vacío ('') por definición
+
+    uint256 counter; // empieza en zero por definición
+    mapping(uint256 => string) listaSaludos;
+
+    // mapping address a edad
+    mapping(address => uint256) public edadPorAddress;
+
+    function set(string memory _nuevoSaludo) public {
+        saludo = _nuevoSaludo;
+
+        // guardando en el mapping;
+        listaSaludos[counter] = _nuevoSaludo;
+        counter++; // counter += 1; // counter = counter + 1;
+    }
+
+    function get() public view returns (string memory) {
+        return saludo;
+    }
+
+    function setEdadPorAddress(address _account, uint256 _edad) public {
+        edadPorAddress[_account] = _edad;
+    }
+}
+```
+
+El método `setEdadPorAddress` nos ayuda a maper un `address` a una `edad` en particular.
+
+Cabe resaltar que la palabra clave `public` se ha utilizado cuando se define el mapping de `edadPorAddress`. Al usar esta palabra clave, Solidity, automáticamente, ha creado un getter. Sin la palabra clave `public`, se tendría que añadir el siguiente código:
+
+```solidity
+    function getEdadporAddress(address _account) public view returns (uint256 _edad) {
+        return edadPorAddress[_account];
+    }
+```
+
+Tipos de llaves (key) and valores (value) permitidos:
+
+`mapping(keyType => ValueType) mappingName;` 
+
+![image-20221005060109568](https://user-images.githubusercontent.com/112733805/194439375-8ad58d9c-e895-4eb7-9238-11f953a32068.png)
+
+El doble mapping es Smart Contracts es usando frecuentemente y cabe ahondar en su entendimiento y uso. Si hablamos de base de datos, esta relación podría considerarse *one-to-many*. Veamos el siguiente ejemplo:
+
+3_5_DoubleMapping
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -491,75 +558,31 @@ contract DoubleMapping {
 
     /**
      Desarrollo:
-        fijarSaldoMatrix("Carmen", "Lee", 100);
-        fijarSaldoMatrix("Jen", "Lee", 200);
-        fijarSaldoMatrix("Lea", "Lee", 300);
-        fijarSaldoMatrix("Lee", "Carmen", 200);
-        fijarSaldoMatrix("Jhon", "Carmen", 400);
+        fijarSaldoMatrix("Carmen", "Lee", 100);     
+        fijarSaldoMatrix("Jen", "Lee", 200);     
+        fijarSaldoMatrix("Lea", "Lee", 300);     
+        fijarSaldoMatrix("Lee", "Carmen", 200);     
+        fijarSaldoMatrix("Jhon", "Carmen", 400);     
      */
 }
 ```
 
-**_El tipo de data `Address`_**
+Limitaciones de la estructura de datos `mapping`:
 
-Cada EOA (externally owned account) y Smart Contract Account tiene una dirección (`address`). Se guarda como un valor de 20 bytes (160 bits o 40 caractéres hexadecimales). Siempre se le prefija el `0x` por el formato hexadecimal. Es usado para enviar y recibir Ether, así como también otras criptomonedas no nativas.
+* Existe un conjuto de typos definidos para ser usados en la llave (`KeyType`) del mapping
+* No se puede iterar sobre un `mapping` porque virtualmente todas las llaves son inicializadas. Tampongo un `mapping` tiene longitud. 
+* Tampoco es posible solicitar todas las llaves del `mapping`, por la razón anterior.
+* Un `mapping` no se puede usar como valor de retorno de una función.
 
-Ejemplo: 0x5387ddeec8ddC004a217d8e172241EB5F900B302
-
-Puede ser considerado como una indentidad pública en el Blockchain, más como un seudónimo. Para ser más preciso, se puede entender como una cuenta de banco. En el mismo modo en que necesitas una cuenta de banco para recibir y enviar dinero, se usará el `address` para enviar y/o recibir dinero, además de realizar transacciones.
-
-En lo sucesivo se usará `address` como identificador único de un usuario involucrado en realizar alguna transacción dentro del Smart Contract.
-
-Supongamos que deseamos asociar la edad (`uint256`) de cada usuario con su `address`. Para ello usaremos un mapping:
-
-```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity >=0.4.16 <0.9.0;
-
-contract MiPrimerContrato {
-    string saludo; // empieza como un string vacío ('') por definición
-
-    uint256 counter; // empieza en zero por definición
-    mapping(uint256 => string) listaSaludos;
-
-    // mapping address a edad
-    mapping(address => uint256) public edadPorAddress;
-
-    function set(string memory _nuevoSaludo) public {
-        saludo = _nuevoSaludo;
-
-        // guardando en el mapping;
-        listaSaludos[counter] = _nuevoSaludo;
-        counter++; // counter += 1; // counter = counter + 1;
-    }
-
-    function get() public view returns (string memory) {
-        return saludo;
-    }
-
-    function setEdadPorAddress(address _account, uint256 _edad) public {
-        edadPorAddress[_account] = _edad;
-    }
-}
-```
-
-El método `setEdadPorAddress` nos ayuda a maper un `address` a una `edad` en particular.
-
-Cabe resaltar que la palabra clave `public` se ha utilizado cuando se define el mapping de `edadPorAddress`. Al usar esta palabra clave, Solidity, automáticamente, ha creado un getter. Sin la palabra clave `public`, se tendría que añadir el siguiente código:
-
-```solidity
-    function getEdadporAddress(address _account) public view returns (uint256 _edad) {
-        return edadPorAddress[_account];
-    }
-```
-
-**_Propagación de un Error vía `require` o `revert`_**
+***Propagación de un Error vía `require` o `revert`***
 
 `require` o `revert` en Solidity es usado para validar ciertas condiciones dentro del código y lanzar una excepción si dicha condición no es cumplida. Esto es importante para prevenir la finalización de una transacción si se detecta una condición indeseada.
 
 Cabe mencionar que esta propagación del error será notada por el usuario en el front-end (dApp) antes de firmar una transacción mediante su billetera (de Metamask u otra).
 
 Veamos cómo aplicamos `require` o `revert` en el código:
+
+4_ErroRevert.sol
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -588,11 +611,17 @@ contract MiPrimerContrato {
 
 `revert` y `require` propagarán el error si es que no cumple las condiciones allí definidas. La única diferencia entre uno y otro es que `require` lleva el condicional y el mensaje de error como argumentos de un método. En cambio, `revert` ofrece mayor flexibilidad para validar y plantear las condiciones a cumplir. `revert` solo lleva como argumento el mensaje del error.
 
+Ejemplo de cómo se vería un error en producción [link](https://mumbai.polygonscan.com/tx/0xc96a8ad2c078065dae2c1fb02cf2590870346e17c5055e5ddc4637eb3f85d977):
+
+![image-20221005063900106](https://user-images.githubusercontent.com/112733805/194439364-dad1caf3-0c8f-47d6-aca6-c12587945d4e.png)
+
 **_Usando eventos a modo de notificación_**
 
 `Events` dentro de Solidity son disparados cuando algún metodo en particular es ejecutado. Los eventos pueden llevar información adicional para explicar lo que esá sucediendo. Normalmente, el nombre del evento seguido de la información que contiene, explica muy bien un suceso dentro del blockchain.
 
 Los eventos disparados desde un Smart Contract son prograpagos en el Blockchain. Dichos eventos quedan registrados por siempre. En un futuro se pueden hacer queries de eventos disparados anteriormente. Incluso se puede usar para almacenar información de manera económica. Estos eventos pueden ser captados desde el front-end en un dApp si se establece una conexión.
+
+5_Events.sol
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -638,6 +667,36 @@ contract MiPrimerContrato {
 }
 ```
 
+Ejemplos de eventos propagados en la red [link](https://polygonscan.com/address/0x54FC36444355602Fb110842411D3b0E6C4F1Cfd6#events).
+
+![image-20221005063541888](https://user-images.githubusercontent.com/112733805/194439372-2e95a90d-1d59-4c92-8e45-9f7746906317.png)
+
+**_msg.sender_**
+
+Es la cuenta (address) que llama o ha ejecutado una función (de smart contract) o ha creado una transacción.
+
+Esta cuenta (address) puede ser una dirección de un contrato (CA) o una persona como nosotros (EOA).
+
+`msg.sender` funciona como una variable global dentro de Solidity y puede ser usada dentro de los métodos del Smart Contract como una variable ya definida.
+
+Otras variables globales en Solidity [link](https://docs.soliditylang.org/en/v0.8.9/cheatsheet.html?highlight=global%20variables#global-variables).
+
+5_5_MsgSender.sol
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.4.16 <0.9.0;
+
+contract MiPrimerContrato {
+    // ...
+    address caller;
+    function setCaller() public returns(address) {
+        caller = msg.sender;
+        return msg.sender;
+    }
+}
+```
+
 **_Consideraciones para la creación de una criptomoneda_**
 
 Comenzaremos con la creación de una criptomoneda desde cero. Sin librerías. En la actualidad se crean critptomonedas con diez líneas de código. Como desarrolladores, es imporante conocer el funcionamiento interno. Más adelante, utilizaremos librerías que acelaran el proceso mediante templates testeados y auditados. Repasemos los elementos esenciales de todo token (escrito en código en un Smart Contract):
@@ -650,16 +709,15 @@ Comenzaremos con la creación de una criptomoneda desde cero. Sin librerías. En
 6. Método que permite la <u>acuñación</u> de tokens a favor de una cuenta en particular (`mint`)
 7. Método que permite <u>quemar</u> (burn) tokens. La lógica detrás de esto es que genera deflación (menos dinero en la economía)
 8. Método que permite <u>transferir</u> tus propios tokens a una segunda persona (método `transfer`)
-   - Internamente validar que el usuario tiene más tokens de los que quiere enviar
+      * Internamente validar que el usuario tiene más tokens de los que quiere enviar
 9. Llevar la cuenta de los balances de tokens a gastar que los mismos dueños (del token) han <u>autorizado a otras cuentas para gastar</u> en su representación
 10. Método que permite <u>transferir tokens en nombre</u> de una segunda persona con previa aprobación de la segunda persona (método `transferFrom`)
+      * Validar que esa segunda persona tiene más tokens de lo que se planea enviar
 
-    - Validar que esa segunda persona tiene más tokens de lo que se planea enviar
-
-11. Definir métodos para incrementar el permiso de gastar tokens de otra persona
-12. Disparar eventos de Transferencia cada vez que se transfieren tokens de un lado a otro. Dispararar eventos de Aprobación cada vez que una cuenta le da permiso a otra para gastar sus tokens
-13. Método para visualizar el total de tokens de una cuenta
-14. Método para visualizar la cantidad de tokens a gastar en nombre de otra persona con su previo permiso
+11. Definir métodos para <u>incrementar el permiso</u> de gastar tokens de otra persona
+12. Disparar <u>eventos de Transferencia</u> cada vez que se transfieren tokens de un lado a otro. Dispararar <u>eventos de Aprobación</u> cada vez que una cuenta le da permiso a otra para gastar sus tokens 
+13. Método para <u>visualizar el total de tokens</u> de una cuenta
+14. Método para <u>visualizar la cantidad de tokens a gastar</u> en nombre de otra persona con su previo permiso
 
 A continuación se muestra el primer borrador en base a las consideraciones expuestas:
 
@@ -682,7 +740,7 @@ contract ERC20Generic {
       10. Método que permite <u>transferir tokens en nombre</u> de una segunda persona con previa aprobación de la segunda persona (método `transferFrom`)
           * Validar que esa segunda persona tiene más tokens de lo que se planea enviar
       11. Definir métodos para incrementar el permiso de gastar tokens de otra persona
-      12. Disparar eventos de Transferencia cada vez que se transfieren tokens de un lado a otro. Dispararar eventos de Aprobación cada vez que una cuenta le da permiso a otra para gastar sus tokens
+      12. Disparar eventos de Transferencia cada vez que se transfieren tokens de un lado a otro. Dispararar eventos de Aprobación cada vez que una cuenta le da permiso a otra para gastar sus tokens 
       13. Método para visualizar el total de tokens de una cuenta
       14. Método para visualizar la cantidad de tokens a gastar en nombre de otra persona con su previo permiso
    */
@@ -942,3 +1000,178 @@ contract ERC20Generic {
     }
 }
 ```
+
+**_Modifiers_**
+
+Supongamos que queremos proteger el acceso de ciertos métodos del Smart Contract. Una manera simple de lograr ello es validando la cuenta (address) que llama al método. Si es una cuenta (address) no conocida se interrumpe la ejecución. Veamos la manera ingenua de implementarlo seguido del uso de modifiers:
+
+7_Modifier-1.sol
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+contract Modifier {
+    uint256 totalSupply;
+    address owner = 0x5387ddeec8ddC004a217d8e172241EB5F900B302;
+    mapping(address => uint256) balances;
+    event Transfer(address from, address to, uint256 value);
+
+    function _mint(address _account, uint256 _amount) internal {
+        require(_account != address(0), "Mint to the zero address");
+
+        totalSupply += _amount;
+        balances[_account] += _amount;
+
+        emit Transfer(address(0), _account, _amount);
+    }
+
+    function mintProtegido(address _to, uint256 _amount) public {
+        if (msg.sender != owner) revert("No autorizado");
+        _mint(_to, _amount);
+    }
+
+    function funcParaProteger1() public view {
+        if (msg.sender != owner) revert("No autorizado");
+    }
+
+    function funcParaProteger2() public view {
+        if (msg.sender != owner) revert("No autorizado");
+    }
+
+    function funcParaProteger3() public view {
+        if (msg.sender != owner) revert("No autorizado");
+    }
+
+    modifier verificarAdmin() {
+        if (msg.sender != owner) revert("No autorizado");
+        // require(msg.sender == owner, "No autorizado");
+        _;
+    }
+
+    function mintProtedigoConModifier(address _to, uint256 _amount)
+        public
+        verificarAdmin
+    {
+        // if (msg.sender != owner) revert("No autorizado");
+        _mint(_to, _amount);
+    }
+
+    function funcProtegerModifier1() public view verificarAdmin {}
+
+    function funcProtegerModifier2() public view verificarAdmin {}
+
+    function funcProtegerModifier3() public view verificarAdmin {}
+}
+```
+
+¿Qué es un `modifier`?
+
+Un modificador intenta cambiar el comportamiento de la función en la cual está incluida. Por ejemplo, un `modifier` podría revisar o validar una condición antes de que se ejecute la función.
+
+Son muy útiles porque ayudan a reducir código redundante. Se puede reutilizar el mismo `modifier` en múltiples funciones revisando las misma condiciones en todos los métodos donde se incluye.
+
+Si al revisar/validar la condición (dentro del `modifier`) no se cumple, un error es propagado y la ejecución del método se interrumpe. 
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+contract Modifier2 {
+    modifier MiModificador() {
+        _;
+        // cuerpo del modifier
+        _;
+    }
+
+    // Se puede crear modifiers con y sin paréntesis
+    modifier MiModificador2() {
+        _;
+    }
+    modifier MiModificador3() {
+        _;
+    }
+    // Se puede crear modifiers con y sin argumentos
+    modifier MiModificadorWithArgs(uint256 a) {
+        require(a >= 10, "a es menor a 10");
+        _;
+    }
+}
+```
+
+¿Qué es `_;`?
+
+*"Returns the flow of execution to the original function code" (docs)*
+
+A este símbolo se le conoce como el comodín fusión (merge wildcard). Fusiona el código del método con el `modifier` donde el comodín es ubicado.
+
+En otras palabras, el cuerpo de la función donde el modificador está incluido, será insertado donde aparezca el símbolo de `_;`.
+
+¿Dónde ubicar el `_;` dentro del `modifier`?
+
+Puede ir al inicio, a la mitad y al final. Incluso puede repetirse varias veces.
+
+La manera más segura de usar el patrón del modifier es poner el `_;` al final. De esta manera, el `modifier` sirve como un consistente punto de validación, revisa ciertas condiciones antes de proseguir.
+
+7_Modifier-2
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+contract Modifier2 {
+// Ejemplo de cómo es la manera más segura dado que valida antes de proseguir
+    function todoEnOrden() public pure returns (bool) {
+        // ejecuta las validaciones necesarias
+        return true;
+    }
+
+    function estaAutorizado() public pure returns (bool) {
+        // ejecuta las validaciones necesarias
+        return true;
+    }
+
+    modifier SoloSiTodoEnOrdenYAutorizado() {
+        require(todoEnOrden());
+        require(estaAutorizado());
+        _;
+    }
+}
+```
+
+**_Práctica de reforzamiento_**
+
+Vamos a crear un smart contract que consolide todos los conceptos hasta ahora expuestos.
+
+1. Crear un sistema de contabilidad para una empresa que permita llevar una cuenta de todo lo gastado por cada uno de sus clientes. Para cada cuenta (address), vincular lo gastado por dicho cliente en una lista.
+
+2. Cada cliente puede consultar la cantidad gastada hasta el momento.
+3. Se creará un lista blanca de cuentas de administrador que tendrán el privilegio de actualizar la lista de cuentas. Antes de actualizar la lista de saldos, se corroborará que dicha cuenta sea parte de la lista blanca.
+4. Nuevas cuentas de pueden incluir en la lista blanca de administradores. Este método también debe estar protegido para ser llamado solo por admins.
+5. Cada vez que se guarda o actualiza información de la lista, se disparará un evento con información relevante a la transacción.
+6. Cada usuario puede decidir incluirse en una lista negra para no monitorear sus gastos en el sistema
+
+**_Constructors_**
+
+Los constructores son un concepto muy conocido en Programación Orientada a Objetos. En muchos lenguajes, cuando se definen clases, también se puede definir un mágico método que solamente se ejecutará una sola vez en el momento en que una nueva instancia del objecto es creada.
+
+En el caso de Solidity, el código definido dentro del constructor, solo se ejecutará una sola vez cuando el contrato es creado y publicado en la red.
+
+Es una función opcional declarada. Cuando no hay constructor, el contrato asumirá un constructor por defecto que es `constructor() {}`. 
+
+Es importante mencionar que el `bytecode` publicado en la red, no contiene el código del `constructor`, dado que el constructor corre solo una vez al ser publicado.
+
+¿Cómo se define un constructor en Solidity?
+
+Se utiliza la palabra clave `constructor()`. No hay necesidad de añadir la palabra clave `function` dado que el constructor es una función especial.
+
+```solidity
+constract Constructor {
+		constructor() {
+				// código que será ejecutado una sola vez
+				// cuando se cree el contrato
+		}
+}
+```
+
+**_Herencia en Contratos_**
