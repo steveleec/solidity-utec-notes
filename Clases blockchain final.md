@@ -707,7 +707,7 @@ Comenzaremos con la creación de una criptomoneda desde cero. Sin librerías. En
 4. Internamente debería llevar la <u>cuenta de los balances</u> de cada persona que tiene criptomoneda
 5. Llevar la <u>cuenta del total de tokens</u> repartidos
 6. Método que permite la <u>acuñación</u> de tokens a favor de una cuenta en particular (`mint`)
-7. Método que permite <u>quemar</u> (burn) tokens. La lógica detrás de esto es que genera deflación (menos dinero en la economía)
+7. Método que permite <u>quemar</u> (`burn`) tokens. La lógica detrás de esto es que genera deflación (menos dinero en la economía)
 8. Método que permite <u>transferir</u> tus propios tokens a una segunda persona (método `transfer`)
       * Internamente validar que el usuario tiene más tokens de los que quiere enviar
 9. Llevar la cuenta de los balances de tokens a gastar que los mismos dueños (del token) han <u>autorizado a otras cuentas para gastar</u> en su representación
@@ -720,6 +720,8 @@ Comenzaremos con la creación de una criptomoneda desde cero. Sin librerías. En
 14. Método para <u>visualizar la cantidad de tokens a gastar</u> en nombre de otra persona con su previo permiso
 
 A continuación se muestra el primer borrador en base a las consideraciones expuestas:
+
+6_ERC20-1.sol
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -844,6 +846,8 @@ contract ERC20Generic {
 Publicar y verificar el Smart Contract en la red Goerli Testnet del mismo modo que se publicó [aquí](https://goerli.etherscan.io/address/0x94591A9A48eF62737017BCF5dA7e89F354e99D3c#code).
 
 Sin embargo, este Smart Contract no tiene las verificaciones necesarias y requeridas para evitar errores. Por ejemplo, no se verifica si un usuario antes de transferir tokens, tenga el balance suficiente. Tampoco se verifica que en una transferencia, el destinatario sea una cuenta sin llave privada. A continuación se muestra un Smart Contract que hace exactamente lo mismo que el anterio y además incluyes las validaciones necesarias:
+
+6_ERC20-2.sol
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -1103,7 +1107,7 @@ contract Modifier2 {
 
 *"Returns the flow of execution to the original function code" (docs)*
 
-A este símbolo se le conoce como el comodín fusión (merge wildcard). Fusiona el código del método con el `modifier` donde el comodín es ubicado.
+A este símbolo se le conoce como el **comodín fusión** (merge wildcard). Fusiona el código del método con el `modifier` donde el comodín es ubicado.
 
 En otras palabras, el cuerpo de la función donde el modificador está incluido, será insertado donde aparezca el símbolo de `_;`.
 
@@ -1139,6 +1143,139 @@ contract Modifier2 {
 }
 ```
 
+<u>¿Cómo usar modifiers para pausar un contrato?</u>
+
+Es tan simple como utilizar un flag dentro de un modifier. Este flag tomará valores `true` o `false`. Dentro del modifier se tendrá un `require` que validará el flag. Si el flag es `false`, quiere decir que no está pausado y debería permitir que el flujo continúe. De lo contrario, si el flag está en `true`, el `modifier`, a través del `require`, debería impedir la continuación del flujo, por ende, impedir la ejecución del método donde se encuentra ese modifier.
+
+7_Modifier-3.sol
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+contract Modifers3 {
+    uint256 totalSupply;
+    address owner = 0x5387ddeec8ddC004a217d8e172241EB5F900B302;
+
+    mapping(address => uint256) balances;
+
+    event Transfer(address from, address to, uint256 value);
+
+    function _mint(address _account, uint256 _amount) internal {
+        require(_account != address(0), "Mint to the zero address");
+
+        totalSupply += _amount;
+        balances[_account] += _amount;
+
+        emit Transfer(address(0), _account, _amount);
+    }
+
+    function mintProtegido(address _to, uint256 _amount) public {
+        if (msg.sender != owner) revert("No autorizado");
+        _mint(_to, _amount);
+    }
+
+    modifier onlyOwner() {
+        require(owner == msg.sender, "No es el owner quien llama al contrato");
+        _;
+    }
+
+    // modifier que verifica que no se encuentre en pausa los métodos
+    modifier whenNotPaused() {
+        require(!paused, "Los metodos estan pausados");
+        _;
+    }
+
+    bool paused;
+
+    function mintProtegidoConModifier(address _to, uint256 _amount)
+        public
+        onlyOwner
+        whenNotPaused
+    {
+        _mint(_to, _amount);
+    }
+
+    function pauseMethods() public onlyOwner {
+        paused = true;
+    }
+
+    function unpauseMethods() public onlyOwner {
+        paused = false;
+    }
+}
+```
+
+**_Constructors_**
+
+Los constructores son un concepto muy conocido en Programación Orientada a Objetos. En muchos lenguajes, cuando se definen clases, también se puede definir un mágico método que solamente se ejecutará una sola vez en el momento en que una nueva instancia del objecto es creada.
+
+En el caso de Solidity, el código definido dentro del constructor, solo se ejecutará una sola vez cuando el contrato es creado y publicado en la red.
+
+Es una función opcional declarada. Cuando no hay constructor, el contrato asumirá un constructor por defecto que es `constructor() {}`. 
+
+Es importante mencionar que el `bytecode` publicado en la red, no contiene el código del `constructor`, dado que el constructor corre solo una vez al ser publicado.
+
+<u>¿Cómo se define un constructor en Solidity?</u>
+
+Se utiliza la palabra clave `constructor()`. No hay necesidad de añadir la palabra clave `function` dado que el constructor es una función especial.
+
+```solidity
+contract Constructor {
+		constructor() {
+				// código que será ejecutado una sola vez
+				// cuando se cree el contrato
+		}
+}
+```
+
+<u>Inicializar el Smart Contract con valores externos</u>
+
+El constructor es muy útil para pasar valores de inicialización al Smart Contract. Nada impide que estos valores sean escritos en el futuro. Sin embargo, ello implicaría definir métodos adicionales de `set`.
+
+```solidity
+contract Constructor {
+		string saludo;
+		constructor(string memory _saludo) {
+			saludo = _saludo;
+		}
+}
+```
+
+<u>¿Cómo saber quién publicó el smart contract?</u>
+
+Ya sabemos que `msg.sender` es una variable global en solidity que nos permite saber quién ha llamado un método en particular. Cuando usamos `msg.sender` dentro de un `constructor` en solidity, podemos saber la cuenta (address) que hizo la publicación del contrato. Veámoslo:
+
+8_Constructor.sol
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+contract Constructor {
+    address public publicador;
+    mapping(address => bool) whitelist;
+    mapping(address => bool) blacklist;
+
+    event Published();
+
+    string saludo;
+
+    constructor(string memory _saludo) {
+        publicador = msg.sender;
+        whitelist[msg.sender] = true;
+        blacklist[msg.sender] = true;
+
+        emit Published();
+
+        // valores iniciales en un SC
+        saludo = _saludo;
+    }
+}
+```
+
+Al publicar este contrato, la variable `publicador` obtendrá como valor el address de la persona que lo publicó. Además de ello, todas las inicializaciones dentro del `constructor`, serán ejecutadas una sola vez.
+
 **_Práctica de reforzamiento_**
 
 Vamos a crear un smart contract que consolide todos los conceptos hasta ahora expuestos.
@@ -1151,27 +1288,359 @@ Vamos a crear un smart contract que consolide todos los conceptos hasta ahora ex
 5. Cada vez que se guarda o actualiza información de la lista, se disparará un evento con información relevante a la transacción.
 6. Cada usuario puede decidir incluirse en una lista negra para no monitorear sus gastos en el sistema
 
-**_Constructors_**
-
-Los constructores son un concepto muy conocido en Programación Orientada a Objetos. En muchos lenguajes, cuando se definen clases, también se puede definir un mágico método que solamente se ejecutará una sola vez en el momento en que una nueva instancia del objecto es creada.
-
-En el caso de Solidity, el código definido dentro del constructor, solo se ejecutará una sola vez cuando el contrato es creado y publicado en la red.
-
-Es una función opcional declarada. Cuando no hay constructor, el contrato asumirá un constructor por defecto que es `constructor() {}`. 
-
-Es importante mencionar que el `bytecode` publicado en la red, no contiene el código del `constructor`, dado que el constructor corre solo una vez al ser publicado.
-
-¿Cómo se define un constructor en Solidity?
-
-Se utiliza la palabra clave `constructor()`. No hay necesidad de añadir la palabra clave `function` dado que el constructor es una función especial.
+9_Practica.sol
 
 ```solidity
-constract Constructor {
-		constructor() {
-				// código que será ejecutado una sola vez
-				// cuando se cree el contrato
-		}
+// SPDX-License-Identifier: MIT
+pragma solidity >=0.4.16 <0.9.0;
+
+contract Practica {
+    /**
+    1. Crear un sistema de contabilidad para una empresa que permita llevar una 
+       cuenta de todo lo gastado por cada uno de sus clientes. Para cada cuenta
+       (address), vincular lo gastado por dicho cliente en una lista.
+    2. Cada cliente puede consultar la cantidad gastada hasta el momento.
+    3. Se creará un lista blanca de cuentas de administrador que tendrán el privilegio
+       de actualizar la lista de cuentas. Antes de actualizar la lista de saldos, se
+       corroborará que dicha cuenta sea parte de la lista blanca.
+    4. Nuevas cuentas de pueden incluir en la lista blanca de administradores. Este método
+       también debe estar protegido para ser llamado solo por admins.
+    5. Cada vez que se guarda o actualiza información de la lista, se disparará un evento
+       con información relevante a la transacción.
+    6. Cada usuario puede decidir incluirse en una lista negra
+       para no monitorear sus gastos en el sistema
+    */
+    modifier onlyAdmin() {
+        require(whiteList[msg.sender], "Not a registered admin");
+        _;
+    }
+
+    event UpdatedBalance(address _account, uint256 _amount, uint256 _timestamp);
+
+    // lista de saldos
+    mapping(address => uint256) balances;
+
+    // lista de admins
+    mapping(address => bool) whiteList;
+
+    // black list
+    mapping(address => bool) blackList;
+
+    constructor() {
+        // Dado que el contructor se ejecuta cuando se publica el SC
+        // msg.sender sería el address que también está publicando el SC
+        // aprovechamos para guardar el primer admin usando el contructor
+        whiteList[msg.sender] = true;
+    }
+
+    function viewSpent(address _account) external view returns (uint256) {
+        return balances[_account];
+    }
+
+    // List blanca
+    function updateBalance(address _account, uint256 _amount)
+        external
+        onlyAdmin
+    {
+        require(
+            !blackList[msg.sender],
+            "El cliente decidio no ser monitoreado"
+        );
+
+        balances[_account] += _amount;
+        emit UpdatedBalance(_account, balances[_account], block.timestamp);
+    }
+
+    function includeInWhiteList(address _account) external onlyAdmin {
+        whiteList[_account] = true;
+    }
+
+    // black list
+    function includeInBlackList() external {
+        blackList[msg.sender] = true;
+
+        // eliminar su información
+        balances[msg.sender] = 0;
+        // delete balances[msg.sender];
+    }
 }
 ```
 
 **_Herencia en Contratos_**
+
+En Solidity, se puede decir que los contratos se comportan como las clases en cualquier otro lenguaje de Programación Orientada a los Objetos. Es decir, contratos pueden heredar y también pueden ser heredados. De este modo podemos construir patrones de diseño complejos.
+
+<u>¿Cómo se hereda en Solidity?</u>
+
+Se utiliza una palabra clave llamada `is`  seguido del contrato. Veámoslo:
+
+```solidity
+contract A {} // base contract
+contract B is A {} // derived contract
+```
+
+Un contrato también puede heredar de múltiples contratos:
+
+```solidity
+contract A {} // base contract
+contract B {} // base contract
+contract C is A, B {} // derived contract
+```
+
+Cuando un contrato hereda otros contratos, en realidad solo un único contrato es creado en el blockchain. El código de los contratos base (`A` en el primer ejemplo; `A` y `B` en el segundo ejemplo) es en realidad compilado en el único contrato publicado (`B` en el primero ejemplo; `C` en el segundo ejemplo).
+
+Para poder exponer un método de un contrato base a otro contrato derivado, de manera tal que no sea usada externamente, dicho método debe definirse como interno (`internal`).
+
+<u>Orden para heredar</u>
+
+Solidity guía la herencia de contratos usando el algoritmo de linearización C3 ([c3 linearization](https://en.wikipedia.org/wiki/C3_linearization)). Con éste, se posibilita la herencia múltiples propiedades y métodos de modo tal que no hacen conflicto.
+
+En Solidity, se tienen que listar los contratos desde el contrato más base a la izquierda hasta el más derivado hacia la derecha.
+
+```solidity
+contract Humano{}
+contract Hombre is Humano{}
+
+// contract Marcos is Hombre, Humano{} // INCORRECT
+contract Marcos is Humano, Hombre {}
+```
+
+<u>La palabra clave `super`</u>
+
+`super` es usado en herencia de contratos cuando se desea llamar un método definido en un nivel arriba en la jerarquía de herencia. `super.[method]` encontrará el método más cerca del smart contract que lo esté llamando.
+
+10_InheritanceEasy.sol
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+contract Humano {
+    function saludoHumano() public pure returns (string memory) {
+        return "Hola, como vamos. Soy Humano";
+    }
+}
+
+contract Hombre is Humano {
+    function saludoHombre() public pure returns (string memory) {
+        return "Hola, como vamos. Soy Hombre";
+    }
+
+    // Llamando al método 'saludar' del papá
+    function bienvenidaDeHumano() public pure returns (string memory) {
+        return super.saludoHumano();
+    }
+
+    function bienvenidaDeHumano2() public pure returns (string memory) {
+        return Humano.saludoHumano();
+    }
+}
+
+contract Marcos is Humano, Hombre {
+    function saludoMarcos() public pure returns (string memory) {
+        return "Hola, como vamos. Soy Marcos";
+    }
+
+    // llamando al contrato papá
+    function bienvenidaDeHombre() public pure returns (string memory) {
+        return super.saludoHombre();
+    }
+
+    // llamando al contrato abuelo
+    function saludoDeHumano() public pure returns (string memory) {
+        return super.saludoHumano();
+    }
+    
+    // notar que cuando se publica el contrato Marcos
+    // también se han heredado los métodos de los
+    // contratos base (Humano y Hombre).
+}
+```
+
+**_Sobrescritura de métodos (function overriding)_**
+
+En herencia de contratos, los métodos también se heredan a los contratos derivados. Un contrato derivado puede sobrescribir un método ya definido en un contrato base. Para poder volver a escribir un método de un contrato base, se deben usar las palabras clave `virtual` y `override` en los métodos de la base y derivado respectivamente. Veamos:
+
+* palabra clave `virtual` : posibilita que ese método se pueda sobrescribir en contratos derivados
+* palabra clave `override`: especifica que dicha función está siendo sobrescrita en ese mismo lugar
+
+**_Herencia y métodos en contratos_**
+
+10_Inheritance.sol
+
+```solidity
+contract Humano {
+    function saludar() public pure virtual returns (string memory) {
+        return "Hola, como vamos. Soy Humano";
+    }
+}
+
+contract Hombre is Humano {
+    function saludar()
+        public
+        pure
+        virtual
+        override(Humano)
+        returns (string memory)
+    {
+        return "Hola, como vamos. Soy Hombre";
+    }
+
+    // Llamando al método 'saludar' del papá
+    function bienvenidaDeHumano() public pure returns (string memory) {
+        return super.saludar();
+    }
+
+    function bienvenidaDeHumano2() public pure returns (string memory) {
+        return Humano.saludar();
+    }
+}
+
+contract Marcos is Humano, Hombre {
+    function saludar()
+        public
+        pure
+        override(Humano, Hombre)
+        returns (string memory)
+    {
+        return "Hola, como vamos. Soy Marcos";
+    }
+}
+```
+
+**_Herencia y constructores en contratos_**
+
+Cuando se heredan contratos, los contratos base pueden tener argumentos que se requieren en su contructor para poder inicializarlos. En dichos casos, el contrato derivado (hijo), tiene que ejectuar el constructor del contrato base.
+
+<u>¿Cómo inicializar el constructor del contrato Base?</u>
+
+1. Directamente en la lista de herencia de contratos
+2. A través de un "modifier" para el `constructor` del contrato derivado
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+contract Humano {
+    string description;
+    string origin;
+    uint256 year; // no existe year.toString();
+
+    constructor(
+        string memory _description,
+        string memory _origin,
+        uint256 _year
+    ) {
+        description = _description;
+        origin = _origin;
+        year = _year;
+    }
+
+    function saludo() public view virtual returns (string memory) {
+        return
+            string(
+                abi.encodePacked(
+                    "I'm a ",
+                    description,
+                    " from ",
+                    origin,
+                    ". How are you?"
+                )
+            );
+    }
+}
+
+/** 
+    1
+    Directamente en la lista de herencia 
+    - cuando sabes los argumentos a priori
+*/
+contract Hombre is Humano("Homo Sapiens", "Earth", 2022) {
+    function getDescription() public view returns (string memory) {
+        return description;
+    }
+
+    function getOrigin() public view returns (string memory) {
+        return origin;
+    }
+
+    function getYear() public view returns (uint256) {
+        return year;
+    }
+
+    function saludo() public pure override returns (string memory) {
+        return "Hola, soy Hombre";
+    }
+
+    function saludoPapa() public view returns (string memory) {
+        return super.saludo();
+    }
+}
+
+/** 
+    2
+    Como si fuera un modifier del constructor
+    - si deseas tener mayor control sobre los argumentos del constructor
+*/
+contract HombreV2 is Humano {
+    constructor(
+        string memory _description,
+        string memory _origin,
+        uint256 _year
+    ) Humano(_description, _origin, _year) {
+        // esto puede estar vacío
+        // lo único que importa es pasar los argumentos al contrato Base
+    }
+}
+
+/** 
+    Herencia múltiple
+    Hombre V3 no hereda Humano
+*/
+
+contract HombreV3 {
+    uint256 height;
+
+    constructor(uint256 _height) {
+        height = _height;
+    }
+}
+
+contract Programmador is HombreV3, Humano {
+    constructor(
+        string memory _description,
+        string memory _origin,
+        uint256 _year,
+        uint256 _height
+    ) HombreV3(_height) Humano(_description, _origin, _year) {}
+}
+
+/** 
+    Herencia múltiple
+    Hombre V4 hereda Humano
+*/
+contract HombreV4 is Humano {
+    uint256 height;
+
+    constructor(
+        string memory _description,
+        string memory _origin,
+        uint256 _year,
+        uint256 _height
+    ) Humano(_description, _origin, _year) {
+        height = _height;
+    }
+}
+
+contract Programmado2 is Humano, HombreV4 {
+    constructor(
+        string memory _description,
+        string memory _origin,
+        uint256 _year,
+        uint256 _height
+    ) HombreV4(_description, _origin, _year, _height) {}
+}
+```
+
+**_Herencia y modifiers_**
+
+Los modifiers pueden ser aislados en otros contratos y reutilizados de la misma manera en que los métodos se reciclan de los contratos base. 	
