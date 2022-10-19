@@ -1516,6 +1516,8 @@ Cuando se heredan contratos, los contratos base pueden tener argumentos que se r
 1. Directamente en la lista de herencia de contratos
 2. A través de un "modifier" para el `constructor` del contrato derivado
 
+10_InheritanceContructors.sol
+
 ```solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
@@ -1644,3 +1646,519 @@ contract Programmado2 is Humano, HombreV4 {
 **_Herencia y modifiers_**
 
 Los modifiers pueden ser aislados en otros contratos y reutilizados de la misma manera en que los métodos se reciclan de los contratos base.
+
+10_InheritanceModfrs.sol
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+contract Owner {
+    address owner;
+
+    modifier onlyOwner() {
+        require(owner == msg.sender, "No es el owner quien llama al contrato");
+        _;
+    }
+
+    constructor() {
+        owner = msg.sender;
+    }
+}
+
+contract Paused is Owner {
+    bool paused;
+
+    modifier whenNotPaused() {
+        require(!paused, "Los metodos estan pausados");
+        _;
+    }
+
+    function pauseMethods() public onlyOwner {
+        paused = true;
+    }
+
+    function unpauseMethods() public onlyOwner {
+        paused = false;
+    }
+}
+
+contract InheritanceModfrs is Owner, Paused {
+    uint256 totalSupply;
+    mapping(address => uint256) balances;
+    event Transfer(address from, address to, uint256 value);
+
+    function _mint(address _account, uint256 _amount) internal {
+        require(_account != address(0), "Mint to the zero address");
+        totalSupply += _amount;
+        balances[_account] += _amount;
+        emit Transfer(address(0), _account, _amount);
+    }
+
+    function mintProtegidoConModifier(address _to, uint256 _amount)
+        public
+        onlyOwner
+        whenNotPaused
+    {
+        _mint(_to, _amount);
+    }
+}
+```
+
+**_Especificadores de visibilidad en métodos_**
+
+Los métodos en Solidity tienen diferente niveles de exposición y de herencia. La capacidad de tener diferentes niveles de visibilidad, facilita el uso de patrones de diseño en los smart contract.
+
+En solidity existen cuatro tipos de visibilidad y son `public`, `private`, `internal` y `external`. Cada uno de ellas tiene efectos diferentes que se listan a continuación:
+
+`public`
+
+- puede ser <u>consumido internamente</u> dentro del mismo contrato por otros métodos
+- otros Smart Contract y externally owned accounts <u>podrán</u> llamar al método
+- puede ser <u>heredado</u> en contratos derivados y ser usado desde contratos derivados
+- este método será <u>incluido en el ABI</u> generado al compilar el smart contract
+- puede ser <u>sobreescrito</u> en contratos derivados
+
+`internal`
+
+- puede ser <u>consumido internamente</u> dentro del mismo contrato por otros métodos
+- puede ser <u>heredado</u> en contratos derivados y ser usado desde contratos derivados
+- otros Smart Contract y externally owned accounts <u>no podrán</u> llamar al método
+- este método será <u>no incluido en el ABI</u> generado al compilar el smart contract.
+- puede ser <u>sobreescrito</u> en contratos derivados
+
+`private`
+
+- puede ser <u>consumido internamente</u> dentro del mismo contrato por otros métodos
+- <u>no heredado</u> en contratos derivados ni ser usado desde contratos derivados
+- otros Smart Contract y externally owned accounts <u>no podrán</u> llamar al método
+- este método será <u>no incluido en el ABI</u> generado al compilar el smart contract
+- <u>no sobreescrito</u> en contratos derivados
+
+`external`
+
+- <u>no consumido internamente</u> dentro del mismo contrato por otros métodos
+- <u>no heredado</u> en contratos derivados ni ser usado desde contratos derivados
+- otros Smart Contract y externally owned accounts <u>podrán</u> llamar al método
+- este método será <u>incluido en el ABI</u> generado al compilar el smart contract
+- puede ser <u>sobreescrito</u> en contratos derivados
+
+Esta tabla resume lo descrito anteriormente:
+
+| Visibility | Contrato | Derivado | SC/EOA  | ABI     | Override |
+| ---------- | -------- | -------- | ------- | ------- | -------- |
+| `public`   | `true`   | `true`   | `true`  | `true`  | `true`   |
+| `internal` | `true`   | `true`   | `false` | `false` | `true`   |
+| `private`  | `true`   | `false`  | `false` | `false` | `false`  |
+| `external` | `false`  | `true`   | `true`  | `true`  | `true`   |
+
+11_visibilityMethods.sol
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+contract A {
+    //1
+    // 'public'
+    // llamado por EOA y SC
+    // heredable
+    // de uso interno en el contrato
+    // ABI
+    // sobreescribible
+    function funcHeredablePublicaEInterna() public virtual {}
+
+    // 2
+    // 'internal'
+    // heredable
+    // de uso interno en el contrato y en derivados
+    // sobreescribible
+    function funcHeredableEInterna() internal virtual {}
+
+    // 3
+    // 'private'
+    // de uso interno en el contrato únicamente
+    // no sobreescribible: no soporta 'virtual'
+    function funcInterna() private {}
+
+    // 4
+    // 'external'
+    // llamado por EOA y SC
+    // heredable
+    // sobreescribible
+    function funcExternaYHeredable() external {}
+}
+
+contract B is A {
+    // 1
+    // function funcHeredablePublicaEInterna heredada en B
+    // 2
+    // function funcHeredableEInterna heredada en B
+    // 3
+    // function funcInterna NO heredada en B
+    // 4
+    // function funcExternaYHeredable heredada en B
+}
+```
+
+**_Modificadores de métodos_**
+
+Los métodos en Solidity poseen varios modificadores que les añaden o limitan ciertas propiedades o capacides. Lista de modificadores en métodos: `pure`, `view`, `payable`, `virtual` y `override`.
+
+`virtual` y `override` fueron vistos en sobreescritura de  métodos. Ahora veremos los modificadores `view` y `pure`. Luego, `payable` será estudiado para realizar transferencias de monedas nativas (`Ether`).
+
+`view`
+
+* Puede leer del `storage`. Es decir, puede leer cualquier información  de variables que a su vez se guardan en el smart contract. 
+* Por lo general los métodos `view` son usados para crear `getters` de información.
+* No consume gas siempre y cuando (1) sea llamado externamente o (2) es llamado internamente por otro método `view`.
+* Consume gas cuando un método no `view` de un contrato llama la función `view`. Dado que la función que llama genera una transacción (porque no es `view`), el cálculo/proceso interno que se hace dentro del método `view` será incluido con su costo de gas crrespondiente.
+
+`pure`
+
+* no pueden leer del `storage`
+* no pueden modificar variables del `storage`
+* No consume gas siempre y cuando (1) sea llamado externamente o (2) es llamado internamente por otro método `view` o `pure`.
+* Consume gas cuando un método no `view` de un contrato llama la función `pure`.
+
+12_viewPure.sol
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+contract Pure {
+    event Number(uint256 number);
+
+    function functionPure() public pure returns (uint256) {
+        return 3;
+    }
+
+    function functionPure2(uint256 _a) internal pure returns (uint256) {
+        // emit Number(_a); // no se puede disparar un evento
+        return _a * 10**3;
+    }
+
+    function functionPure3() external pure returns (string memory) {
+        return "Function pura";
+    }
+}
+
+contract View {
+    uint256 a = 12314324235435346;
+    event Number(uint256 number);
+
+    function functionView() public view returns (uint256) {
+        // emit Number(a); // no se puede disparar un evento
+        return a;
+    }
+
+    function functionView2() internal view returns (uint256) {}
+
+    function functionView3() external view returns (uint256) {}
+}
+```
+
+**_Mecanismo de roles para acceso_**
+
+Usando modifiers hemos logrado proteger métodos para que sean ejecutados solamente por cuentas que son `onlyAdmin` . Sin embargo, usar `onlyAdmin` es muy restrictivo cuando se quiere crear diferetens privilegios para diferentes métodos. Es decir, que una cuanta puede ejecutar el método A, pero no el método B.
+
+Hay otra manera de lograr un esquema de roles con privilegios más complejos. El resultado final debería lucir así:
+
+13_accessRoles.sol
+
+```solidity
+contract AccessRoles {
+    function funcParaSoloRoleA() public onlyRole(ONLY_ROLE_A) {}
+
+    function funcParaSoloRoleB() public onlyRole(ONLY_ROLE_B) {}
+
+    function funcParaSoloRoleC() public onlyRole(ONLY_ROLE_C) {}
+}
+```
+
+De aquí se infiere que una `address` en particular a quien se le ha asignado el `ONLY_ROLE_A`, es la única cuena que tiene el privilegio de llamar al método `funcParaSoloRoleA()`. 
+
+Con una algoritmo de otorgar roles más complejos, podemos crear la siguiente table de roles y addresses.
+
+|           | MINTER | BURNER | PAUSER |
+| --------- | ------ | ------ | ------ |
+| Account 1 | True   | True   | True   |
+| Account 2 | True   | False  | True   |
+| Account 3 | False  | False  | True   |
+
+14_accessRoles.sol
+
+```solidity
+contract AccessRoles {
+    /**
+ 
+    |           | MINTER | BURNER | PAUSER |
+    | --------- | ------ | ------ | ------ |
+    | Account 1 | True   | True   | True   |
+    | Account 2 | True   | False  | True   |
+    | Account 3 | False  | False  | True   |
+
+    1. definir un mapping doble para guardar una matriz de información
+    mapping 1 -> address => role
+    mapping 2 -> role => boolean
+    mapping(address => mapping(bytes32 => bool)) roles;
+
+    2. definir metodo de lectura de datos de la matriz
+        hasRole
+
+    3. definir método para escribir datos en la matriz
+        grantRole
+        mapping[accout 1][MINTER] = true
+        mapping[accout 1][BURNER] = true
+        mapping[accout 1][PAUSER] = true
+        
+        mapping[accout 2][MINTER] = true
+        mapping[accout 2][PAUSER] = true
+        
+        mapping[accout 3][PAUSER] = true
+
+    4. crear modifier que verifica el acceso de los roles
+    
+    5. utilizar el constructor para inicializar valores
+  */
+
+    bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;
+
+    mapping(address => mapping(bytes32 => bool)) roles;
+
+    constructor() {
+        roles[msg.sender][DEFAULT_ADMIN_ROLE] = true;
+    }
+
+    modifier onlyRole(bytes32 _role) {
+        require(roles[msg.sender][_role], "Account has no role/privilege");
+        _;
+    }
+
+    function grantRole(address _account, bytes32 _role)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        roles[_account][_role] = true;
+    }
+
+    function revokeRole(address _account, bytes32 _role)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        roles[_account][_role] = false;
+    }
+
+    function hasRole(address _account, bytes32 _role)
+        public
+        view
+        returns (bool)
+    {
+        return roles[_account][_role];
+    }
+}
+```
+
+
+
+**_Optimización ERC20_**
+
+Con todo lo visto hasta el momento, ha llegado el momento de optimizar una vez más el código del contrato ERC20 que se trabajo anteriormente en `6_ERC20-2.sol`.
+
+15_ERC20-3.sol
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+// 2. convertir en Template este contracto
+contract ERC20Template {
+    string nameCrypto;
+    string symbolCrypto;
+
+    uint256 totalSupply;
+
+    mapping(address => uint256) balances;
+    mapping(address => mapping(address => uint256)) _allowances;
+
+    event Transfer(address from, address to, uint256 amount);
+    event Approval(address owner, address spender, uint256 amount);
+
+    // 1. Definir constructor
+    constructor(string memory _nameCrypto, string memory _symbolCrypto) {
+        nameCrypto = _nameCrypto;
+        symbolCrypto = _symbolCrypto;
+    }
+
+    function name() public view returns (string memory) {
+        return nameCrypto;
+    }
+
+    function symbol() public view returns (string memory) {
+        return symbolCrypto;
+    }
+
+    function decimals() public pure returns (uint256) {
+        return 18;
+    }
+
+    function _mint(address _account, uint256 _amount) internal {
+        require(_account != address(0), "Acuniando a address 0");
+
+        balances[_account] += _amount;
+        totalSupply += _amount;
+
+        emit Transfer(address(0), _account, _amount);
+    }
+
+    function burn(uint256 _amount) public {
+        _burn(msg.sender, _amount);
+    }
+
+    function _burn(address _account, uint256 _amount) internal {
+        require(_account != address(0), "Quemando de address 0");
+
+        // uint256 miBalance = balances[_account];
+        uint256 miBalance = balanceOf(_account);
+        require(miBalance >= _amount, "Insuficientes tokens para quemar");
+
+        balances[_account] -= _amount;
+        totalSupply -= _amount;
+
+        emit Transfer(_account, address(0), _amount);
+    }
+
+    // Se transfieren MIS TOKENS
+    function transfer(address _to, uint256 _amount) public returns (bool) {
+        return _transfer(msg.sender, _to, _amount);
+    }
+
+    function transferFrom(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) public {
+        uint256 permisoParaGastar = _allowances[_from][msg.sender];
+        require(permisoParaGastar >= _amount, "No tengo suficiente permiso");
+
+        _transfer(_from, _to, _amount);
+
+        _allowances[_from][msg.sender] = permisoParaGastar - _amount;
+    }
+
+    function _transfer(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) internal returns (bool) {
+        require(_from != address(0), "Enviado desde address zero");
+        require(_to != address(0), "Enviado a address zero");
+
+        uint256 balanceFrom = balanceOf(_from);
+        require(balanceFrom >= _amount, "Insuficientes tokens");
+
+        balances[_from] -= _amount;
+        balances[_to] += _amount;
+
+        emit Transfer(_from, _to, _amount);
+        return true;
+    }
+
+    function approve(address _spender, uint256 _amount) public {
+        require(_spender != address(0), "Spender es address zero");
+        _allowances[msg.sender][_spender] = _amount;
+        emit Approval(msg.sender, _spender, _amount);
+    }
+
+    function balanceOf(address _account) public view returns (uint256) {
+        return balances[_account];
+    }
+
+    function allowance(address _owner, address _spender)
+        public
+        view
+        returns (uint256)
+    {
+        return _allowances[_owner][_spender];
+    }
+}
+
+// 7. Pasar el modifier a otro contrato
+contract Protegido {
+    address _owner;
+
+    constructor() {
+        _owner = msg.sender;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == _owner, "No es el owner");
+        _;
+    }
+}
+
+// 10. Pausable
+contract Pausable is Protegido {
+    bool paused;
+    modifier whenNotPaused() {
+        require(!paused, "Contrato pausado");
+        _;
+    }
+
+    modifier whenPaused() {
+        require(paused, "Contrato no pausado");
+        _;
+    }
+
+    function pause() public onlyOwner {
+        paused = true;
+    }
+
+    function unpause() public onlyOwner {
+        paused = false;
+    }
+}
+
+// 3. Heredar el contrato
+// 8. Heredar 'Protegido'
+contract MiPrimerToken is ERC20Template, Protegido, Pausable {
+    // address owner;
+
+    // 6. Create modifier
+    // modifier onlyOwner() {
+    //     require(msg.sender == owner, "No es el owner");
+    //     _;
+    // }
+
+    // 4. Definiendo el constructor
+    // constructor() ERC20Template("Mi Primer Token", "MPRTK") {
+    constructor(string memory _nameCrypto, string memory _symbolCrypto)
+        ERC20Template(_nameCrypto, _symbolCrypto)
+    {
+        // 9. eliminar owner aqui
+        // owner = msg.sender;
+    }
+
+    // 5. Exponiendo y protegiendo mint
+    function mint(address _account, uint256 _amount)
+        public
+        onlyOwner
+        whenNotPaused
+    {
+        _mint(_account, _amount);
+    }
+}
+
+// en caso quisiéramos utilizar el template en otro contracto
+contract MiPrimerToken2 is ERC20Template, Protegido {
+    constructor() ERC20Template("Mi Primer Token2", "MPRTK2") {}
+
+    function funParaProteger() public view onlyOwner {}
+
+    function funParaProteger2() public view onlyOwner {}
+
+    function funParaProteger3() public view onlyOwner {}
+}
+```
+
