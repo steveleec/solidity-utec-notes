@@ -2444,16 +2444,7 @@ await miPrimerToken.totalSuppy() // 0
 * La llave privada de la billetara de Metamask no cuenta con los fondos suficientes	
 * NodedeJS es una versión antigua
 
-### **Smart Contract Airdrop**
-
-¿Qué es un Airdrop?
-
-- Es una manera de distribuir tokens en los usuarios
-- Tienen la intención de crear una comunida alrededor del proyecto
-- Premia o recompensa ciertos comportamientos del usuarios
-- Cuando envías tokens, la idea detrás es que motives a las personas a usar tu producto
-
-**_Llamadas intercontratos (Interfaces)_**
+***Interfaces***
 
 <u>¿Qué es una Interface?</u>
 
@@ -2474,26 +2465,382 @@ En otras palabras, el definir interfaces contribuye a tener un .estándar.
 1. Enforcer - Al heredar una interface en un Smart Contract, la interface forzará a que dicho smart contract implemente los métodos definidos en la interface. De faltar algún método definido en la interfaz pero no desarrollado en el contrato, no se podrá compilar
 
 ```solidity
-interface IEnforcer { function balance(addess )}
-contract A is IEnforce {}
+interface IEnforcer { 
+	function balance(address _account) external returns(uint256);
+}
+contract A is IEnforcer {
+	function balance(address _account) public view returns(uint256) {
+		// ... function with body
+	}
+}
 ```
 
 2. Door - Permite comunicarte con otro Smart contract siguiendo las definiciones de sus métodos en la interfaz. En este caso no es necesario la herencia de la interface. Esta interface podrá ser tratada como un método más para poder acceder a sus definiciones.
 
-<u>¿Cómo se crean las interfaces?</u>
+```solidity
+interface IDoor {
+	function balance(address _account) external returns(uint256);
+}
 
+contract B {
+	address _doorAddress;
+	function getBalanceOfAnotherContract(address _account) public view returns(uint256) {
+		return IDoor(_doorAddress).balance(_account);
+	}
+}
+```
 
+<u>¿Cómo se definen las interfaces?</u>
 
-Vamos a desarrollar diferentes tipos de Airdrops:
+```solidity
+interface IEnforcer { 
+	function balance(address _account) external returns(uint256);
+}
+```
 
-<u>LISTA BLANCA Y NÚMERO ALEATORIO</u>
+* Una interface se define con la palabra clave `interface`
+* Cada definición de función incluye el nombre de la función, tipos de parámetros, y tipos de valores de retorno
+* En interfaces, las funciones terminan en `;`, mientras que en los smart contracts, terminan en `{}`.
+* Métodos en interfaces pueden ser tanto de lectura y escritura
+* Los métodos dentro de una interface deben ser declarados como `external`
+* La convención es comenzar cada interface con la letra I, seguido del nombre del contrato (e.g. `IERC20`, `IERC1155`)
 
-* Se necesita una lista blanca para poder participar
-* Los participantes podrán solicitar un número rándom de tokens de 1-1000 tokens
-* Total de tokens a repartir es 10 millones
-* El contrato Airdrop tiene el privilegio de poder llamar `mint` del token
+<u>Interfaces y herencia</u>
 
+Interfaces pueden heredar otras interfaces pero no pueden heredar otros contratos. Las mismas reglas de herencia para contratos se aplica a interfaces.
 
+16_interfacesInhe.sol
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+interface IA {
+    function balanceOf(address _account) external returns (uint256);
+}
+
+interface IB is IA {
+    function totalSupply() external returns (uint256);
+}
+
+// contract Token is IA, IB {
+contract Token is IB {
+    function totalSupply() external virtual returns (uint256) {}
+
+    function balanceOf(address _account) external virtual returns (uint256) {}
+}
+```
+
+<u>Función overloading y Eventos en interfaces</u>
+
+Las interfaces soportan la definición de métodos con el mismo nombre pero que tengan diferentes argumentos (y posiblemente diferente valores de retorno). A esta característica se llama **funcion overloading**. En estas situaciones, el contrato que hereda una interface con función overloading tendrá que implementar ambos métodos con sus diferentes argumentos.
+
+También es posible definir los eventos dentro de la misma interface para luego heredarlos. Veamos cómo funcionan:
+
+17_interfaceOverloadinEven.sol
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+interface IERC20 {
+    event Transfer(address _account);
+    event Transfer2(address _accountOne, address _accountTwo);
+
+    function balanceOf(address _account) external returns (uint256);
+
+    function balanceOf(address _accountOne, address _accountTwo)
+        external
+        returns (uint256, uint256);
+}
+
+contract Token is IERC20 {
+    function balanceOf(address _account) external returns (uint256) {
+        emit Transfer(_account);
+        return 3;
+    }
+
+    function balanceOf(address _accountOne, address _accountTwo)
+        external
+        returns (uint256, uint256)
+    {
+        emit Transfer2(_accountOne, _accountTwo);
+        return (3, 5);
+    }
+}
+```
+
+<u>Llamadas intercontratos</u>
+
+Veamos un ejemplo de cómo un contrato `A` interactúa con un contrato `B` para leer y escribir sobre él. Por lo general, se siguen estos pasos:
+
+1. Definamos un contrato con el cual se quiere interactuar
+2. Creamos la interface necesaria para interactuar
+3. Capturamos la dirección del Smart Contract con el cual se desea interactuar
+4. Creamos una "puerta" con la `interface` y `address` del contrato
+
+Desarrollo:
+
+ ```solidity
+ // 1
+ contract ContratoParaSerLeidoYEjecutado is AccessRoles {
+     bytes32 public constant SMART_C_ROLE = keccak256("SMART_C_ROLE");
+ 
+     uint256 _totalBalance = 10**6 * 10**18;
+ 
+     function totalBalance() public view returns (uint256) {
+         return _totalBalance;
+     }
+ 
+     function funcWithPrivilege() public onlyRole(SMART_C_ROLE) {
+         _totalBalance += _totalBalance;
+     }
+ }
+ ```
+
+```solidity
+// 2
+interface ICParaSerLeidoYEjecutado {
+    function totalBalance() external returns (uint256);
+
+    function funcWithPrivilege() external;
+}
+```
+
+```solidity
+// 3 y 4
+contract ContratoQueLeeYEjecuta {
+    address cParaLeerAddress = address(0);
+
+    // Manera 1: definir la interface como variable: "instanciar"
+    IContParaLeerYEjec contratoParaLeerYEj =
+        IContParaLeerYEjec(cParaLeerAddress);
+
+    function leerBalanceDeContratoExterno() public returns (uint256) {
+        return contratoParaLeerYEj.totalBalance();
+    }
+
+    function ejecutarFuncConPrivilegioExterno() public {
+        contratoParaLeerYEj.funcWithPrivilege();
+    }
+
+    // Manera 2: utilizar la misma interface como function con propiedades
+    function leerBalanceDeContratoExterno2() public returns (uint256) {
+        return IContParaLeerYEjec(cParaLeerAddress).totalBalance();
+    }
+
+    function ejecutarFuncConPrivilegioExterno2() public {
+        IContParaLeerYEjec(cParaLeerAddress).funcWithPrivilege();
+    }
+}
+```
+
+Ejercicio:
+
+Leer la información del siguiente contrato:
+
+```solidity
+contract Leer {
+	string public name = "Contrato Leer";
+	uint256 public edad = 100;
+}
+```
+
+**_Structs_**
+
+<u>¿Qué es un `struct`?</u>
+
+Con `structs` se pueden definir tipos de datos personalizados en Solidity. Un struct es una colección de variables de diferentes tipos agrupados bajo un tipo definido por el usuario.
+
+<u>Definir un `struct`</u>
+
+Veamos como se construye un struct:
+
+```solidity
+contract Structs {
+    // 1. palabra clave 'struct'
+    // 2. nombre del struct: 'Balance'
+    struct Balance {
+        // 3. definición de las variables internas del struct
+        //    son como los atributos del struct
+        uint256 monto;
+        uint256 limiteMensualGasto;
+        uint256 interes;
+        string name;
+    }
+}
+```
+
+<u>Declaración de una nueva variable tipo `struct`</u>
+
+Hay al menos dos maneras: la manera lebible (recomendada) y la corta.
+
+```solidity
+    // Declarando un struct
+    // Legible - Recomendada
+    Balance miBalance =
+        Balance({
+            monto: 123,
+            limiteMensualGasto: 467,
+            interes: 120,
+            name: "Cuenta Ahorro"
+        });
+
+    // Corta
+    Balance tuBalance = Balance(999, 10000, 200, "Cuenta corriente");
+```
+
+<u>Tipo de las variables miembro</u>
+
+Pueden ser de cualquier tipo (uint, bool, address, string, bytes, etc.)
+
+Veamos diferentes combinaciones de Structs: Structs en Arrays, en Mappings, etc.
+
+18_struct.sol
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+contract Structs {
+    // 1. palabra clave 'struct'
+    // 2. nombre del struct: 'Balance'
+    struct Balance {
+        // 3. definición de las variables internas del struct
+        //    son como los atributos del struct
+        uint256 monto;
+        uint256 limiteMensualGasto;
+        uint256 interes;
+        string name;
+    }
+
+    // Declarando un struct
+    // Legible - Recomendada
+    Balance miBalance =
+        Balance({
+            monto: 123,
+            limiteMensualGasto: 467,
+            interes: 120,
+            name: "Cuenta Ahorro"
+        });
+
+    // Corta
+    Balance tuBalance = Balance(999, 10000, 200, "Cuenta corriente");
+
+    // Array y Structs
+    struct DNI {
+        uint256 numero;
+        uint256 fechaNac;
+        uint256 fechaExp;
+        string nombre;
+        string segundoNombre;
+        string apellido;
+    }
+    // DNI[] se lee como array cuyos elementos son del tipo DNI
+    // Hemos creado un array de lista de votantes cuyos miembros son del tipo DNI
+    DNI[] public listaDeVotantes;
+
+    function guardarVotante() public {
+        DNI memory nuevoVotante = DNI({
+            numero: 44444444,
+            fechaNac: 30971989,
+            fechaExp: 30072022,
+            nombre: "STEVE",
+            segundoNombre: "LEE",
+            apellido: "MARREROS"
+        });
+        // el único lugar donde se puede hacer push para un array
+        listaDeVotantes.push(nuevoVotante);
+    }
+
+    // Mappings and Structs
+    struct Profesor {
+        string name;
+        string course;
+        uint256 edad;
+        string locacion;
+        string[] materiasADictar;
+    }
+    mapping(address => Profesor) public profesoresPorAddress;
+
+    function guardarProfesor1(address _account) public {
+        Profesor memory profesor = Profesor({
+            name: "Luis",
+            course: "Solidity",
+            edad: 33,
+            locacion: "Lima",
+            materiasADictar: new string[](3)
+        });
+        profesor.materiasADictar[0] = "Algebra";
+        profesor.materiasADictar[1] = "Matematica";
+        profesor.materiasADictar[2] = "Trigonometria";
+
+        profesoresPorAddress[_account] = profesor;
+    }
+
+    function guardarProfesor2(address _account) public {
+        string[] memory _materiasADictar = new string[](3);
+        // _materiasADictar.push("A"); => ERROR for arrays that are not storage
+        _materiasADictar[0] = "Algebra";
+        _materiasADictar[1] = "Matematica";
+        _materiasADictar[2] = "Trigonometria";
+
+        Profesor memory profesor = Profesor({
+            name: "Luis",
+            course: "Solidity",
+            edad: 33,
+            locacion: "Lima",
+            materiasADictar: _materiasADictar
+        });
+
+        profesoresPorAddress[_account] = profesor;
+    }
+
+    function leerMaterias(address _account)
+        public
+        view
+        returns (string[] memory)
+    {
+        return profesoresPorAddress[_account].materiasADictar;
+    }
+
+    // Nested structs and mapping
+    struct Persona {
+        DNI dni;
+        uint256 altura;
+        uint256 peso;
+        // "Casa" => 100,000 soles
+        mapping(string => uint256) listaDeActivos;
+    }
+    // "Marco" => Persona
+    mapping(string => Persona) public listaDePersonas;
+
+    function guardandoPersona(string memory _namePersona) public {
+        DNI memory _dni = DNI({
+            numero: 44444444,
+            fechaNac: 30971989,
+            fechaExp: 30072022,
+            nombre: "STEVE",
+            segundoNombre: "LEE",
+            apellido: "MARREROS"
+        });
+
+        Persona storage persona = listaDePersonas[_namePersona];
+        persona.dni = _dni;
+        persona.altura = 166;
+        persona.peso = 66;
+        persona.listaDeActivos["Casa"] = 100000;
+    }
+
+    function leerActivos(string memory _name, string memory _activo)
+        external
+        view
+        returns (uint256)
+    {
+        return listaDePersonas[_name].listaDeActivos[_activo];
+    }
+}
+```
 
 ##### **Construyendo un número "random" en Solidity:**
 
@@ -2528,3 +2875,30 @@ function _getRadomNumberOne2() internal view returns (uint256) {
     }
 ```
 
+### **Smart Contract Airdrop**
+
+¿Qué es un Airdrop?
+
+- Es una manera de distribuir tokens en los usuarios
+- Tienen la intención de crear una comunida alrededor del proyecto
+- Premia o recompensa ciertos comportamientos del usuarios
+- Cuando envías tokens, la idea detrás es que motives a las personas a usar tu producto
+
+Vamos a desarrollar dos smart contracts con variaciones de Airdrops:
+
+<u>1. LISTA BLANCA Y NÚMERO ALEATORIO</u>
+
+* Se necesita ser parte de la lista blanca para poder participar del Airdrop
+* Los participantes podrán solicitar un número rándom de tokens de 1-1000 tokens. Crear método `participateInAirdrop`.
+* Total de tokens a repartir es 10 millones
+* Solo se podrá participar una sola vez
+* Si el usuario permite que el contrato airdrop queme 10 tokens, el usuario puede volver a participar una vez más
+* El contrato Airdrop tiene el privilegio de poder llamar `mint` del token
+
+<u>2. REPETIBLE CON LÍMITE, PREMIO POR REFERIDO</u>
+
+* El usuario puede participar en el airdrop una vez por día hasta un límite de 10 veces
+* Si un usuario participa del airdrop a raíz de haber sido referido, el que refirió gana 3 días adicionales para poder participar
+* El contrato Airdrop mantiene los tokens para repartir (no llama al `mint` )
+* El contrato Airdrop tiene que verificar que el `totalSupply`  del token no sobrepase el millón
+* El método `participateInAirdrop` le permite participar por un número random de tokens de 1000 - 5000 tokens
