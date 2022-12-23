@@ -2896,6 +2896,130 @@ Vamos a desarrollar dos smart contracts con variaciones de Airdrops:
 - Si el usuario permite que el contrato airdrop queme 10 tokens, el usuario puede volver a participar una vez más
 - El contrato Airdrop tiene el privilegio de poder llamar `mint` del token
 
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+/**
+<u>LISTA BLANCA Y NÚMERO ALEATORIO</u>
+
+* Se necesita ser parte de la lista blanca para poder participar del Airdrop - done
+* Los participantes podrán solicitar un número rándom de tokens de 1-1000 tokens
+* Total de tokens a repartir es 10 millones
+* Solo se podrá participar una sola vez
+* Si el usuario permite que el contrato airdrop queme 10 tokens, el usuario puede volver a participar una vez más
+* El contrato Airdrop tiene el privilegio de poder llamar `mint` del token
+* El contrato Airdrop tiene el privilegio de poder llamar `burn` del token
+*/
+
+interface IMiPrimerTKN {
+    function mint(address to, uint256 amount) external;
+
+    function burn(address from, uint256 amount) external;
+
+    function balanceOf(address account) external view returns (uint256);
+}
+
+contract AirdropONE is Pausable, AccessControl {
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
+    uint256 public constant totalAirdropMax = 10**6 * 10**18;
+    uint256 public constant quemaTokensParticipar = 10;
+
+    uint256 airdropGivenSoFar;
+
+    address miPrimerTokenAdd = 0x5FbDB2315678afecb367f032d93F642f64180aa3; // cambiar por la direccion correcta
+
+    mapping(address => bool) public whiteList;
+    mapping(address => bool) public haSolicitado;
+
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(PAUSER_ROLE, msg.sender);
+    }
+
+    function participateInAirdrop() public whenNotPaused {
+        // lista blanca
+        require(whiteList[msg.sender], "No esta en lista blanca");
+
+        // ya solidito tokens
+        require(!haSolicitado[msg.sender], "Ya ha participado");
+
+        // pedir numero random de tokens
+        uint256 tokensToReceive = _getRadomNumberBelow1000();
+
+        // verificar que no se exceda el total de tokens a repartir
+        require(
+            airdropGivenSoFar + tokensToReceive <= totalAirdropMax,
+            "No hay tokens disponibles"
+        );
+
+        // actualizar el conteo de tokens repartidos
+        airdropGivenSoFar += tokensToReceive;
+        // marcar que ya ha participado
+        haSolicitado[msg.sender] = true;
+
+        // transferir los tokens
+        IMiPrimerTKN(miPrimerTokenAdd).mint(msg.sender, tokensToReceive);
+    }
+
+    function quemarMisTokensParaParticipar() public whenNotPaused {
+        // verificar que el usuario aun no ha participado
+        require(haSolicitado[msg.sender], "Usted aun no ha participado");
+
+        // Verificar si el que llama tiene suficientes tokens
+        uint256 balanceToken = IMiPrimerTKN(miPrimerTokenAdd).balanceOf(
+            msg.sender
+        );
+        require(
+            balanceToken >= quemaTokensParticipar,
+            "No tiene suficientes tokens para quemar"
+        );
+
+        // quemar los tokens
+        IMiPrimerTKN(miPrimerTokenAdd).burn(msg.sender, quemaTokensParticipar);
+
+        // dar otro chance
+        haSolicitado[msg.sender] = false;
+    }
+
+    ///////////////////////////////////////////////////////////////
+    ////                     HELPER FUNCTIONS                  ////
+    ///////////////////////////////////////////////////////////////
+
+    function addToWhiteList(address _account)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        whiteList[_account] = true;
+    }
+
+    function removeFromWhitelist(address _account)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        whiteList[_account] = false;
+    }
+
+    function pause() public onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    function unpause() public onlyRole(PAUSER_ROLE) {
+        _unpause();
+    }
+
+    function _getRadomNumberBelow1000() internal view returns (uint256) {
+        return
+            (uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender))) %
+                1000) + 1;
+    }
+}
+```
+
 <u>2. REPETIBLE CON LÍMITE, PREMIO POR REFERIDO</u>
 
 - El usuario puede participar en el airdrop una vez por día hasta un límite de 10 veces
@@ -2904,11 +3028,146 @@ Vamos a desarrollar dos smart contracts con variaciones de Airdrops:
 - El contrato Airdrop tiene que verificar que el `totalSupply` del token no sobrepase el millón
 - El método `participateInAirdrop` le permite participar por un número random de tokens de 1000 - 5000 tokens
 
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+/**
+2. REPETIBLE CON LÍMITE, PREMIO POR REFERIDO
+
+* El usuario puede participar en el airdrop una vez por día hasta un límite de 10 veces
+* Si un usuario participa del airdrop a raíz de haber sido referido, el que refirió gana 3 días adicionales para poder participar
+* El contrato Airdrop mantiene los tokens para repartir (no llama al `mint` )
+* El contrato Airdrop tiene que verificar que el `totalSupply`  del token no sobrepase el millón
+* El método `participateInAirdrop` le permite participar por un número random de tokens de 1000 - 5000 tokens
+*/
+
+interface IMiPrimerTKN {
+    function transfer(address to, uint256 amount) external returns (bool);
+
+    function balanceOf(address account) external view returns (uint256);
+}
+
+contract AirdropTwo is Pausable, AccessControl {
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
+    // instanciamos el token en el contrato
+    address miPrimerTokenAdd = 0x5FbDB2315678afecb367f032d93F642f64180aa3; // cambiar por la direccion correcta
+    IMiPrimerTKN miPrimerToken = IMiPrimerTKN(miPrimerTokenAdd);
+
+    struct Participant {
+        address cuentaParticipante; // eso me ayudará a saber si ya está registrado
+        uint256 participaciones;
+        uint256 limiteParticipaciones;
+        uint256 ultimaVezParticipado;
+    }
+    mapping(address => Participant) public participantes;
+
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(PAUSER_ROLE, msg.sender);
+    }
+
+    function participateInAirdrop() public {
+        _participateInAirdrop(address(0));
+    }
+
+    function participateInAirdrop(address _elQueRefirio) public {
+        _participateInAirdrop(_elQueRefirio);
+    }
+
+    function _participateInAirdrop(address _account) internal {
+        // si esto se cumple, es porque el usuario es nuevo
+        // solo funciona si es la primera vez que participa
+        // de lo contrario ya se tiene guardado el registro del usuario
+        if (participantes[msg.sender].cuentaParticipante == address(0)) {
+            // crear el registro del participante
+            Participant memory participant = Participant({
+                cuentaParticipante: msg.sender,
+                participaciones: 1,
+                limiteParticipaciones: 10,
+                ultimaVezParticipado: block.timestamp
+            });
+
+            // guardar el registro del participante
+            participantes[msg.sender] = participant;
+        } else {
+            // está reclamando por segunda vez
+            Participant memory participant = participantes[msg.sender];
+
+            // verificar que no se haya excedido el límite de participaciones
+            require(
+                participant.participaciones < participant.limiteParticipaciones,
+                "Llegaste limite de participaciones"
+            );
+
+            // verificar que no se haya participado en el último día
+            // 1 days = 86400 seconds
+            require(
+                participant.ultimaVezParticipado + 1 days < block.timestamp,
+                "Ya participaste en el ultimo dia"
+            );
+
+            // actualizar el registro del participante
+            participantes[msg.sender].participaciones++;
+            participantes[msg.sender].ultimaVezParticipado = block.timestamp;
+        }
+
+        // calcular el número random de tokens a recibir
+        uint256 tokensToReceive = _getRadomNumber10005000();
+
+        // verificar que el Contrato Airdrop tenga los tokens para repartir
+        uint256 balTokensAirdrop = miPrimerToken.balanceOf(address(this));
+        require(
+            balTokensAirdrop >= tokensToReceive,
+            "El contrato Airdrop no tiene tokens suficientes"
+        );
+
+        // transferir los tokens al usuario haciendo uso de la interfaz
+        // transfer descuenta los tokens de quien llama el método
+        // en este caso el que llama es el contrato Airdrop
+        miPrimerToken.transfer(msg.sender, tokensToReceive);
+
+        // manejar el caso de que el usuario haya sido referido
+        if (_account != address(0)) _manejarReferido(_account);
+    }
+
+    function _manejarReferido(address _elQueRefirio) internal {
+        if (participantes[_elQueRefirio].cuentaParticipante != address(0)) {
+            participantes[_elQueRefirio].limiteParticipaciones += 3;
+        }
+    }
+
+    ///////////////////////////////////////////////////////////////
+    ////                     HELPER FUNCTIONS                  ////
+    ///////////////////////////////////////////////////////////////
+
+    function pause() public onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    function unpause() public onlyRole(PAUSER_ROLE) {
+        _unpause();
+    }
+
+    function _getRadomNumber10005000() internal view returns (uint256) {
+        return
+            (uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender))) %
+                4000) +
+            1000 +
+            1;
+    }
+}
+```
+
 # Parte 2
 
 ## Desarrollando una colección de NFTs
 
-​ En esta sección vamos a desarrollar una colección de NFTs. Usaremos el siguiente stack:
+ En esta sección vamos a desarrollar una colección de NFTs. Usaremos el siguiente stack:
 
 1. Interplanetary File System (IPFS)
 2. ERC721 standard
@@ -2918,135 +3177,135 @@ Vamos a desarrollar dos smart contracts con variaciones de Airdrops:
 
 > La misión de IPFS es crear una red resiliente, mejorable y abierta para preservar e incrementar el conocimiento de la humanidad.
 
-​ IPFS desea hacer de la web Peer to Peer (P2P) en vez de tener el tradicional modelo de cliente y servidor. IPFS interconetará nodos de manera resiliente.
+ IPFS desea hacer de la web Peer to Peer (P2P) en vez de tener el tradicional modelo de cliente y servidor. IPFS interconetará nodos de manera resiliente.
 
-​ Está basado en al direccionamiento basado en el contenido.
+ Está basado en al direccionamiento basado en el contenido.
 
-​ IPFS plantea solucionar varios problemas actuales: censura, links rotos (no se basa en un servidor en el contenido que puede esta distribuido en varios nodos), plantea un modelo de seguridad (asegura que el recurso que estás solicitando sea realmente el que estás pidiendo a través del hash del mismo recurso).
+ IPFS plantea solucionar varios problemas actuales: censura, links rotos (no se basa en un servidor en el contenido que puede esta distribuido en varios nodos), plantea un modelo de seguridad (asegura que el recurso que estás solicitando sea realmente el que estás pidiendo a través del hash del mismo recurso).
 
 Casos de uso: guardar recurso estáticos. páginas web. archivar data. construir Dapps. bases de datos científicas. publicaciones científicas.
 
-​ El internet como lo conocemos tiene un problema que reside en la centralización. La información está guardada en granjas de servidores que son controlados por una empresa individual. La centralización trae otro problema que es la censura. El gobierno puede bloquear el accesso a ciertos recursos si es que lo deseara, por ejemplo aquella vez que impidió el acceso a Wikipedia por llamarlo una amenaza nacional.
+ El internet como lo conocemos tiene un problema que reside en la centralización. La información está guardada en granjas de servidores que son controlados por una empresa individual. La centralización trae otro problema que es la censura. El gobierno puede bloquear el accesso a ciertos recursos si es que lo deseara, por ejemplo aquella vez que impidió el acceso a Wikipedia por llamarlo una amenaza nacional.
 
-​ La razón por la cual aún se sigue usando este model es porque la centralización de servidores permite a las empresas tener control sobre la rapidez en que el contenido puede ser entregado.
+ La razón por la cual aún se sigue usando este model es porque la centralización de servidores permite a las empresas tener control sobre la rapidez en que el contenido puede ser entregado.
 
-​ El objetivo de IPFS es hacer de la web completamente distribuida en una similar manera en que BitTorrent funciona.
+ El objetivo de IPFS es hacer de la web completamente distribuida en una similar manera en que BitTorrent funciona.
 
 ¿Cómo se accede a la información actualmente en el internet?
 
-​ Cuando deseas descargar un archivo, tu le dices al navegador exactamente dónde de dónde descargarlo. Por ejemplo se utiliza el siguiente link `htps://webiste.com/archivo.jpg`. Es decir, la ubicación del archivo será el IP address o el nombre del dominio. A esto se le llama Direccionamiento basado en la ubicación (location-based addressing). En el caso en que el servidor de ese archivo esté caído, no habría la posibilidad de obtener dicho archivo, incluso aunque otra persona lo hubiera obtenido.
+ Cuando deseas descargar un archivo, tu le dices al navegador exactamente dónde de dónde descargarlo. Por ejemplo se utiliza el siguiente link `htps://webiste.com/archivo.jpg`. Es decir, la ubicación del archivo será el IP address o el nombre del dominio. A esto se le llama Direccionamiento basado en la ubicación (location-based addressing). En el caso en que el servidor de ese archivo esté caído, no habría la posibilidad de obtener dicho archivo, incluso aunque otra persona lo hubiera obtenido.
 
-​ Para solucionar ese problema, IPFS propone el Direccionamiento basdo en el contenido (content-based addressing) y ya no en la ubicación. En vez de decirle al navegador dónde conseguir el recurso, ahora se le dirá qué es lo que se quiere conseguir. Para lograr ello, es necesario que cada recurso posea un hash único, que es como su huella digital. Entonces, cuando deseas descargar cierto archivo, se preguntará a la red quién tiene el archivo con dicho hash.
+ Para solucionar ese problema, IPFS propone el Direccionamiento basdo en el contenido (content-based addressing) y ya no en la ubicación. En vez de decirle al navegador dónde conseguir el recurso, ahora se le dirá qué es lo que se quiere conseguir. Para lograr ello, es necesario que cada recurso posea un hash único, que es como su huella digital. Entonces, cuando deseas descargar cierto archivo, se preguntará a la red quién tiene el archivo con dicho hash.
 
-​ ¿Y cómo podrías saber que la persona que te envía el recurso no lo ha alterado? Al recibir el recurso, puedes aplicar un método hash en el recurso y comparar el resultado con el hash inicialmente usado para solicitar dicho recurso.
+ ¿Y cómo podrías saber que la persona que te envía el recurso no lo ha alterado? Al recibir el recurso, puedes aplicar un método hash en el recurso y comparar el resultado con el hash inicialmente usado para solicitar dicho recurso.
 
-​ Cuando múltiples personas publican el mismo recurso en la red, este recurso se crea una sola vez y se evita la duplicación, lo cual hace la red más eficiente.
+ Cuando múltiples personas publican el mismo recurso en la red, este recurso se crea una sola vez y se evita la duplicación, lo cual hace la red más eficiente.
 
 ¿Cómo IPFS almancena recursos y lo hace accesible para otras personas?
 
-​ IPFS utiliza "objetos de IPFS" y puede almacenar hasta 256 kb de información. Dentro de este objeto se puede inlcuir links a otros objetos de IPFS. En el caso en que se almacene un recurso que es mucho mayor al límite de 256 kb, el recurso se dividirá en múltiples objetos de IPFS de 256 kb cada uno. Seguido a ello, el sistema creará un objeto IPFS vacío que se encargará de juntar los links a todos los objetos de IPFS creados.
+ IPFS utiliza "objetos de IPFS" y puede almacenar hasta 256 kb de información. Dentro de este objeto se puede inlcuir links a otros objetos de IPFS. En el caso en que se almacene un recurso que es mucho mayor al límite de 256 kb, el recurso se dividirá en múltiples objetos de IPFS de 256 kb cada uno. Seguido a ello, el sistema creará un objeto IPFS vacío que se encargará de juntar los links a todos los objetos de IPFS creados.
 
-​ Dado que IPFS utiliza el direccionamiento basado en el contenido (content-based addressing), una vez que un recurso es añadido a IPFS, ya no puede ser cambiado. IPFS es una base de datos inmutable, parecida a un blockchain.
+ Dado que IPFS utiliza el direccionamiento basado en el contenido (content-based addressing), una vez que un recurso es añadido a IPFS, ya no puede ser cambiado. IPFS es una base de datos inmutable, parecida a un blockchain.
 
-​ El más grande problema que tiene IPFS es el de mantener los archivos disponibles. Todos los nodos de la red guarda un caché de los archivos que ha descargado. También ayudan a compartir el recurso si es solicitado desde otro lugar. El problema surge cuando los nodos que tienen ciertos recursos en memoria se desconectan y nadie más puede obtener dichos recursos. Es como tener BitTorrent sin clientes que surtan un recurso que se está descargando.
+ El más grande problema que tiene IPFS es el de mantener los archivos disponibles. Todos los nodos de la red guarda un caché de los archivos que ha descargado. También ayudan a compartir el recurso si es solicitado desde otro lugar. El problema surge cuando los nodos que tienen ciertos recursos en memoria se desconectan y nadie más puede obtener dichos recursos. Es como tener BitTorrent sin clientes que surtan un recurso que se está descargando.
 
-​ ¿Cómo podemos solucionarlo? Podemos incentivar a las personas a mantener activo sus nodos para guardar recursos, de modo tal que estén disponibles. O también podemos preventivamente distribuir los recursos en varios nodos de modo tal que siempre hay copias disponibles. Eso es exactamente lo que Filecoin intenta hacer.
+ ¿Cómo podemos solucionarlo? Podemos incentivar a las personas a mantener activo sus nodos para guardar recursos, de modo tal que estén disponibles. O también podemos preventivamente distribuir los recursos en varios nodos de modo tal que siempre hay copias disponibles. Eso es exactamente lo que Filecoin intenta hacer.
 
-​ Filecoin ha sido creado por el mismo grupo de gente que creó IPFS. Filecoin es un blockchain creade encima de IPFS que busca ser un mercado decentralizado para guardar información. Es decir, si dispones de un espacio de memori disponible, lo pudes rentar y hacer dinero. De ese modo, Filecoin incentiva a los nodos a mantenerse conectados tan largo como sea posible para poder obtener las recompensas. Del mismo modo, el sistema se preocupa que los recursos se dupliquen en varios nodos.
+ Filecoin ha sido creado por el mismo grupo de gente que creó IPFS. Filecoin es un blockchain creade encima de IPFS que busca ser un mercado decentralizado para guardar información. Es decir, si dispones de un espacio de memori disponible, lo pudes rentar y hacer dinero. De ese modo, Filecoin incentiva a los nodos a mantenerse conectados tan largo como sea posible para poder obtener las recompensas. Del mismo modo, el sistema se preocupa que los recursos se dupliquen en varios nodos.
 
-​ ¿Cómo se puede usar IPFS? En el año 2017, el gobierno de Turquía decidió prohibir el acceso a Wikipedia. La respuesta frente a ello, es que se puso una copia de Wikipedia en IPFS. Dado que IPFS es distribuido y no hay servidores centrales, el gobierno no puede bloquearlo.
+ ¿Cómo se puede usar IPFS? En el año 2017, el gobierno de Turquía decidió prohibir el acceso a Wikipedia. La respuesta frente a ello, es que se puso una copia de Wikipedia en IPFS. Dado que IPFS es distribuido y no hay servidores centrales, el gobierno no puede bloquearlo.
 
 ¿Por qué es llamado interplanetario? Pues en cada planeta, una vez que algn recurso ya se ha solicitado por primera vez, estará cacheado en memoria para ser obtenido dentro del mismo planeta y no habría la necesidad de viajar hasta otro planeta para obtener dicho recurso.
 
 **Instalación de IPFS**
 
-​ Dirígete a `https://ipfs.tech/#install` e instala la versión desktop de IPFS.
+ Dirígete a `https://ipfs.tech/#install` e instala la versión desktop de IPFS.
 
 ![image-20221024220019114](https://user-images.githubusercontent.com/3300958/198416349-1b953f59-d7d1-4079-ad4b-b5fd529346d3.png)
 
-​ En la sección de `FILES` es donde guardaremos la información para la colección de NFTs.
+ En la sección de `FILES` es donde guardaremos la información para la colección de NFTs.
 
 ![image-20221024234359006](https://user-images.githubusercontent.com/3300958/198416354-4a6f4cfb-f31f-4a12-b893-2ab8b0dd9d7b.png)
 
 **ERC721 Standard**
 
-​ El ERC721 es un tipo de estándar o formato que los desarrolladores acuerdan seguir. No es obligatorio pero ayuda a crear compatibilidad con una serie de aplicaciones descentralizadas. En Ethereum, el estándar ERC721 se usa para crear NFTs.
+ El ERC721 es un tipo de estándar o formato que los desarrolladores acuerdan seguir. No es obligatorio pero ayuda a crear compatibilidad con una serie de aplicaciones descentralizadas. En Ethereum, el estándar ERC721 se usa para crear NFTs.
 
-​ ¿Qué es un NFT? NFT significa un Token No Fungible. Fungible significa intercambiable o reemplazable. Por ejemplo, un bitcoin es fungible ya que al ser intercambiado por exactamente otro bitcoin, su valor no ha cambiado. En cambio, los NFT son completamente únicos y no existe equivalencia de uno a uno con otro NFT.
+ ¿Qué es un NFT? NFT significa un Token No Fungible. Fungible significa intercambiable o reemplazable. Por ejemplo, un bitcoin es fungible ya que al ser intercambiado por exactamente otro bitcoin, su valor no ha cambiado. En cambio, los NFT son completamente únicos y no existe equivalencia de uno a uno con otro NFT.
 
-​ Con el estándar ERC721, cada token del smart contract puede tener un valor diferente a raíz de su antiguedad, rareza o incluso por como luce visualmente. Cada NFT tiene un token id y un método especial que al introducir dicho token id, devuelve un elemento visual que representa al NFT.
+ Con el estándar ERC721, cada token del smart contract puede tener un valor diferente a raíz de su antiguedad, rareza o incluso por como luce visualmente. Cada NFT tiene un token id y un método especial que al introducir dicho token id, devuelve un elemento visual que representa al NFT.
 
-​ Este tipo de token es perfecto para ser usado en plataformas que ofrecen colleccionables, accesos privados, tickets de lotería, sitios enumerados para conciertos, etc.
+ Este tipo de token es perfecto para ser usado en plataformas que ofrecen colleccionables, accesos privados, tickets de lotería, sitios enumerados para conciertos, etc.
 
-​ Uno de los proyectos más tempranos y conocidos hasta el momento es [CryptoKitties](https://www.cryptokitties.co/) que usa internamente el estándar ERC721.
+ Uno de los proyectos más tempranos y conocidos hasta el momento es [CryptoKitties](https://www.cryptokitties.co/) que usa internamente el estándar ERC721.
 
 ![image-20221025000418134](https://user-images.githubusercontent.com/3300958/198416356-db586c2c-dea7-48d4-9500-151dad5348e7.png)
 
-​ Se puede observar cómo es que uno de los smart contracts de Crypto Kitties hereda el contrato ERC721 en la siguiente ilustración:
+ Se puede observar cómo es que uno de los smart contracts de Crypto Kitties hereda el contrato ERC721 en la siguiente ilustración:
 
 ![image-20221025000555282](https://user-images.githubusercontent.com/3300958/198416360-bacf870f-6dc0-420c-91ba-be1288b9241e.png)
 
-​ Bajo el estándar ERC721, se pueden crear tokens que son únicos. Con este modelo se ha difundido la idea de tener activos únicos en Ethereum.
+ Bajo el estándar ERC721, se pueden crear tokens que son únicos. Con este modelo se ha difundido la idea de tener activos únicos en Ethereum.
 
-​ El día de hoy, el uso más común para el ERC721 es arte digital. Las personas compran estos NFTs por una variedad de razones. Algunos quieren apoyar al artista, otros buscan una inversión de largo plazo con la esperanza de que el precio subirá. O quizás simplemente les gusta el arte que representa dicho NFT.
+ El día de hoy, el uso más común para el ERC721 es arte digital. Las personas compran estos NFTs por una variedad de razones. Algunos quieren apoyar al artista, otros buscan una inversión de largo plazo con la esperanza de que el precio subirá. O quizás simplemente les gusta el arte que representa dicho NFT.
 
-​ Sin embargo, los casos de uso de los NFT se extiende más allá del arte. Los NFTs también puede ser usados en juegos que son basados en el blockchain. Estos NFTs representan activos únicos dentro del juego. Ejemplo de ello es `Gods Unchained`. En ese juego puedes collecionar cartas que se pueden tranzar en un mercado de segunda mano.
+ Sin embargo, los casos de uso de los NFT se extiende más allá del arte. Los NFTs también puede ser usados en juegos que son basados en el blockchain. Estos NFTs representan activos únicos dentro del juego. Ejemplo de ello es `Gods Unchained`. En ese juego puedes collecionar cartas que se pueden tranzar en un mercado de segunda mano.
 
 ![image-20221025230458247](https://user-images.githubusercontent.com/3300958/198416363-67e92062-fec4-42fb-8b8e-a6009b5e9ac5.png)
 
-​ Los NFTs en la música también se han adaptado. Aplicaciones como Audius permite a los artistas acuñar su trabajo como si fueran tokens ERC721.
+ Los NFTs en la música también se han adaptado. Aplicaciones como Audius permite a los artistas acuñar su trabajo como si fueran tokens ERC721.
 
 **Construyendo un ERC721**
 
-​ Antes de revisar el estándar ERC721, revisemos algunas claves diferencias con el estándar ERC20.
+ Antes de revisar el estándar ERC721, revisemos algunas claves diferencias con el estándar ERC20.
 
 _Balance_
 
-​ Dado que en el estándar ERC721 los items son diferentes, cuando se pregunta por el balance, el valor a retornar representa la cantidad de items diferentes que tiene una cuenta.
+ Dado que en el estándar ERC721 los items son diferentes, cuando se pregunta por el balance, el valor a retornar representa la cantidad de items diferentes que tiene una cuenta.
 
 _Propiedad_
 
-​ Cuando se acuña un nuevo NFT, se asocia el token id del NFT con su dueño. Se puede identificar quién es el dueño de un particular token de NFT bajo el estándar ERC721.
+ Cuando se acuña un nuevo NFT, se asocia el token id del NFT con su dueño. Se puede identificar quién es el dueño de un particular token de NFT bajo el estándar ERC721.
 
 _Visualización_
 
-​ Los NFTs tienen propiedades visuales en base a su rareza. Hay un método en particular que te permite obtener un recurso visual del NFT, así como también propiedades extras.
+ Los NFTs tienen propiedades visuales en base a su rareza. Hay un método en particular que te permite obtener un recurso visual del NFT, así como también propiedades extras.
 
 _Permiso para operar_
 
-​ Mientras que en el estándar ERC20, se podía otorgar permiso a otra cuenta para operar una cantidad de tokens, en el caso del ERC721, el permiso se da o bien por cada token id (`approve`) o bien el permiso es general (`setApprovalForAll`) para todos los NFTs de una cuenta.
+ Mientras que en el estándar ERC20, se podía otorgar permiso a otra cuenta para operar una cantidad de tokens, en el caso del ERC721, el permiso se da o bien por cada token id (`approve`) o bien el permiso es general (`setApprovalForAll`) para todos los NFTs de una cuenta.
 
-​ Ello implica que dentro del smart contract, se tenga que manejar dos tipos de permisos con su propio mecanismo de registro.
+ Ello implica que dentro del smart contract, se tenga que manejar dos tipos de permisos con su propio mecanismo de registro.
 
-​ En el primer tipo de permiso, el dueño del token otorgará el privilegio para que otra cuenta pueda disponer uno de sus NFT en particular. Este dueño puede repetir la operación varias veces. Sin embargo, por cada operación, un solo token (usando el `tokenId`) será entregado.
+ En el primer tipo de permiso, el dueño del token otorgará el privilegio para que otra cuenta pueda disponer uno de sus NFT en particular. Este dueño puede repetir la operación varias veces. Sin embargo, por cada operación, un solo token (usando el `tokenId`) será entregado.
 
-​ Usando el segundo tipo de permiso, el dueño da el acceso a que otra cuenta pueda manejar la totalidad de sus NFTs a su discreción. Aquí no es necesario usar un id del token porque el permiso es general.
+ Usando el segundo tipo de permiso, el dueño da el acceso a que otra cuenta pueda manejar la totalidad de sus NFTs a su discreción. Aquí no es necesario usar un id del token porque el permiso es general.
 
-​ Ambos persmisos descritos se pueden otorgar y quitar cuando el dueño de los NFTs lo desee.
+ Ambos persmisos descritos se pueden otorgar y quitar cuando el dueño de los NFTs lo desee.
 
 _No existe el método `transfer`_
 
-​ El método `transfer` es del estándar ERC20 pero no aparece en el estándar ERC721. En cambio, sí tiene el `transferFrom` que cumple el mismo propósito y tiene tres parámetros: `from`, `to` y `tokenId`. Es decir, se especifica el address origen, el address destino y el identificador del token que se desea enviar.
+ El método `transfer` es del estándar ERC20 pero no aparece en el estándar ERC721. En cambio, sí tiene el `transferFrom` que cumple el mismo propósito y tiene tres parámetros: `from`, `to` y `tokenId`. Es decir, se especifica el address origen, el address destino y el identificador del token que se desea enviar.
 
 _Método `safeTransferFrom`_
 
-​ The principal diferencia entre `safeTransferFrom` y `transferFrom` es que el primero se encarga de verificar que la cuenta a la cual se hace la transferencia sea una cuenta compatible para recibir NFTs. Especialmente es usada para verificar que ciertos smart contracts que reciben NFTs sean capaces de recibir y transferir NFTs. De otro modo, dichos NFTs quedarían bloqueados por siempre en el smart contract.
+ The principal diferencia entre `safeTransferFrom` y `transferFrom` es que el primero se encarga de verificar que la cuenta a la cual se hace la transferencia sea una cuenta compatible para recibir NFTs. Especialmente es usada para verificar que ciertos smart contracts que reciben NFTs sean capaces de recibir y transferir NFTs. De otro modo, dichos NFTs quedarían bloqueados por siempre en el smart contract.
 
 **Elementos complementarios del ERC721**
 
-​ Para terminar de implementar el estándar ERC721 desde cero, hay otros elementos necesarios que tener en cuenta. Será necesario poder convertir un tipo de dato entero a un tipo de dato string para poder crear una ruta de almacenamiento (donde se guarda la metadata). Adicionalmente, en el caso en que se desee enviar NFTs a otro smart contract, este debe implementar cierta interfaz, la cual será validad dentro del estándar ERC721. Veamos estos dos puntos a continuación.
+ Para terminar de implementar el estándar ERC721 desde cero, hay otros elementos necesarios que tener en cuenta. Será necesario poder convertir un tipo de dato entero a un tipo de dato string para poder crear una ruta de almacenamiento (donde se guarda la metadata). Adicionalmente, en el caso en que se desee enviar NFTs a otro smart contract, este debe implementar cierta interfaz, la cual será validad dentro del estándar ERC721. Veamos estos dos puntos a continuación.
 
 _Librería `Strings`_
 
-​ Haremos uso de esta librería para poder convertir números enteros al tipo de dato `string`. Ello será necesario para poder concatenar de manera dinámica el `tokenId` de un token con la ruta en donde se encuentra almancenada su metadata.
+ Haremos uso de esta librería para poder convertir números enteros al tipo de dato `string`. Ello será necesario para poder concatenar de manera dinámica el `tokenId` de un token con la ruta en donde se encuentra almancenada su metadata.
 
-​ La manera de incorporar una librería en un tipo de dato, es de la siguiente manera:
+ La manera de incorporar una librería en un tipo de dato, es de la siguiente manera:
 
 ```solidity
 using Strings for uint256;
 ```
 
-​ De esta manera se especifica que el tipo de dato `uint256` ahora tendrá funcionalidades extras descritas en la librería `Strings`. Para este caso en particular, dicha librería tiene un método llamado `toString` que convierte un tipo de dato `uint256` en un tipo `string`. Se usa de la siguiente manera:
+ De esta manera se especifica que el tipo de dato `uint256` ahora tendrá funcionalidades extras descritas en la librería `Strings`. Para este caso en particular, dicha librería tiene un método llamado `toString` que convierte un tipo de dato `uint256` en un tipo `string`. Se usa de la siguiente manera:
 
 ```solidity
 uint256 number = 2;
@@ -3055,7 +3314,7 @@ uint256 numberString = number.toString(); // "2"
 
 _Interface `IERC721Receiver`_
 
-​ Cuando se intente enviar NFTs a otro smart contract, se solicita que el otro smart contract implemente el siguiente método para evaluar su compatibilidad:
+ Cuando se intente enviar NFTs a otro smart contract, se solicita que el otro smart contract implemente el siguiente método para evaluar su compatibilidad:
 
 ```solidity
 function onERC721Received(
@@ -3066,7 +3325,7 @@ function onERC721Received(
     ) external returns (bytes4);
 ```
 
-​ Cuanto el contrato ERC721 intente enviar tokens a otro contrato, se verificará que dicho método (`onERC721Received`) exista en el otro contrato y retorne el `selector` del mismo método. Caso contrario, la operación se revierte. En el otro contrato, el método a definir sería el siguiente:
+ Cuanto el contrato ERC721 intente enviar tokens a otro contrato, se verificará que dicho método (`onERC721Received`) exista en el otro contrato y retorne el `selector` del mismo método. Caso contrario, la operación se revierte. En el otro contrato, el método a definir sería el siguiente:
 
 ```solidity
 interface IERC721Receiver {
@@ -3086,11 +3345,28 @@ contract ReceiveNFT is IERC721Receiver {
 }
 ```
 
-​ Cabe mencionar que cada vez que se intenta realizar una transferencia, se llevará a cabo esta verificación de manera necesaria.
+ Cabe mencionar que cada vez que se intenta realizar una transferencia, se llevará a cabo esta verificación de manera necesaria.
 
 **Construyendo desde cero el ERC721**
 
-​ Tomando en cuenta las dos consideraciones de `Strings` y `IERC721Receiver`, podemos pasar a implementar un contrato basado en el estándar ERC721.
+1. balanceOf - lleva la cuenta de la cantidad de NFTs de una cuenta. un argumento: owner (address)
+2. name - devuelve el nombre de la colección de NFTs
+3. symbol - devuelve el símbol de la colección de NFTs
+4. approve - aprueba a otra cuenta el manejar un id de NFT. Dos argumentos: to (address) y un tokenId(uint256).
+   1. getApproved: devuelve quién tiene el approve de un tokenId. un argumento: tokenId (uint256)
+5. burn - quema un NFT usando tokenId. un argumento: tokenId(uin256).
+6. safeMint - acuña un nuevo NFT. un argumento: to(address)
+   1. ownerOf: devuelve el dueño (address) de un tokenId. un argumento: tokenId (uint256)
+7. safeTransferFrom - transfiere un NFT con su id de una cuenta a otra. tres argumentos: from (address), to (address) y tokenId (uint256).
+8. safeTransferFrom - transfiere un NFT con su id de una cuenta a otra. cuatro argumentos: from (address), to (address), tokenId (uint256), data (bytes).
+9. setApprovalForAll - aprueba a una cuenta la operación de todos los NFTs. dos argumentos: operator(address) y approved (bool)
+   1. isApprovedForAll: comprueba si un address puede operar todos los NFTs de otra cuenta. dos argumentos: owner (address) y operator(address)
+10. transferFrom - transfiere un NFT con su id de una cuenta a otra. tres argumentos: from (address), to (address) y tokenId (uint256).
+11. tokenURI: devuelve la ruta del IPFS donde se encuentra la metadata de un NFT de manera dinámica. un argumento: tokenID (uint256)
+
+
+
+ Tomando en cuenta las dos consideraciones de `Strings` y `IERC721Receiver`, podemos pasar a implementar un contrato basado en el estándar ERC721.
 
 ```solidity
 // SPDX-License-Identifier: MIT
@@ -3157,6 +3433,24 @@ interface IERC721 {
         returns (bool);
 }
 
+interface IERC721Receiver {
+    /**
+     * @dev Whenever an {IERC721} `tokenId` token is transferred to this contract via {IERC721-safeTransferFrom}
+     * by `operator` from `from`, this function is called.
+     *
+     * It must return its Solidity selector to confirm the token transfer.
+     * If any other value is returned or the interface is not implemented by the recipient, the transfer will be reverted.
+     *
+     * The selector can be obtained in Solidity with `IERC721Receiver.onERC721Received.selector`.
+     */
+    function onERC721Received(
+        address operator,
+        address from,
+        uint256 tokenId,
+        bytes calldata data
+    ) external returns (bytes4);
+}
+
 library Strings {
     /**
      * @dev Converts a `uint256` to its ASCII `string` decimal representation.
@@ -3184,231 +3478,217 @@ library Strings {
     }
 }
 
-interface IERC721Receiver {
-    /**
-     * @dev Whenever an {IERC721} `tokenId` token is transferred to this contract via {IERC721-safeTransferFrom}
-     * by `operator` from `from`, this function is called.
-     *
-     * It must return its Solidity selector to confirm the token transfer.
-     * If any other value is returned or the interface is not implemented by the recipient, the transfer will be reverted.
-     *
-     * The selector can be obtained in Solidity with `IERC721Receiver.onERC721Received.selector`.
-     */
-    function onERC721Received(
-        address operator,
-        address from,
-        uint256 tokenId,
-        bytes calldata data
-    ) external returns (bytes4);
-}
-
 contract MiPrimerNFT is IERC721 {
-    string private _name;
-    string private _symbol;
+    // 1. balanceOf: lleva la cuenta de los NFTs de un address. un argumento: owner(address)
+    // 2. name: devuelve el nombre de la coleccion
+    // 3. symbol: devuelve el simbolo de la collecion
+    // 4. burn: quema el NFT. lo pasa al address 0. un argumento: tokenId(uint256)
+            // * si otra persona tiene permiso, lo puede quemar
+    // 5. safeMint: acuña un NFT a un address. secuencial.  un argumento: to (address)
+            // * es safe porque verifica que el recipiento, si es un SC, puede manejar NFTs
+            // 5.1 ownerOf: me devuelve quien es el duenio de un tokenId
+                // un argumento: tokenId(uint256)
+    // 6. approve: da permiso a una cuenta de manejar UN NFT
+        // dos argumentos: to (address), tokenId(uint256)
+        // 6.1 getApproved: me indica quien es el operador de UN nft con el tokenId
+            // un argumento: tokenId(uint256)
+    // 7. transferFrom: transfiere un NFT usando el tokenId, de una cuenta from a una cuenta to.
+            // 3 argumentos: from(address), to(address), tokenId(uint256)
+    // 8. safeTransferFrom: transfiere un NFT usando el tokenId, de una cuenta from a una cuenta to.
+            // 3 argumentos: from(address), to(address), tokenId(uint256)
+            // * además de transferir, revisa que el recipiento puede manejar NFTs
+    // 9. safeTransferFrom: transfiere un NFT usando el tokenId, de una cuenta from a una cuenta to.
+            // 4 argumentos: from(address), to(address), tokenId(uint256), data(bytes)
+            // * además de transferir, revisa que el recipiento puede manejar NFTs
 
-    // token id to address
-    mapping(uint256 => address) _owners;
+    // 10. setApprovalForAll: otorga el permiso a todos los NFTs de una cuenta
+            // 2 argumentos: operator (address), approved(bool)
+            // * approved: true => da permiso, false => quita permiso
+            // 10.1 isApprovedForAll: me devuelve el address que puede operar todos los NFTs
+                // 2 argumentos: owner (address), operator(address)
 
-    // cantidad de NFTs por persona
-    mapping(address => uint256) _balances;
+    // 11. tokenURI: nos devuelve (de manera dinámica) la ruta de la metadata para un tokenId
+        // un argumento: tokenId(uint256)
 
-    // guarda los que pueden operar UN nft en nombre de una cuenta
-    mapping(uint256 => address) _tokenApprovals;
-
-    // guarda los que pueden operar TOODS los nft en nombre de una cuenta
-    mapping(address => mapping(address => bool)) _operatorApprovals;
-
-    // Using library
     using Strings for uint256;
 
-    uint256 counter;
-
-    constructor(string memory name_, string memory symbol_) {
-        _name = name_;
-        _symbol = symbol_;
-        counter = 1;
-    }
-
-    function safeMint(address to) public {
-        _safeMint(to, counter, "");
-        counter++;
-    }
-
-    function _safeMint(
-        address to,
-        uint256 tokenId,
-        bytes memory data
-    ) internal {
-        if (to.code.length > 0) return;
-        _mint(to, tokenId);
-        require(
-            _checkOnERC721Received(address(0), to, tokenId, data),
-            "No implemento para recibir ERC721 tokens"
-        );
-    }
-
-    function _mint(address to, uint256 tokenId) internal {
-        require(to != address(0));
-        require(!_exists(tokenId), "No tiene duenio el NFT");
-
-        _owners[tokenId] = to;
-        _balances[to] += 1;
-    }
-
-    function balanceOf(address owner)
-        public
-        view
-        override
-        returns (uint256 balance)
-    {
+    // 1. balanceOf: lleva la cuenta de los NFTs de un address. un argumento: owner(address)
+    // address => uint256
+    mapping(address => uint256) _balances;
+    function balanceOf(address owner) public view returns(uint256) {
         return _balances[owner];
     }
 
-    function ownerOf(uint256 tokenId) public view returns (address owner) {
+    string _nameCollection;
+    string _symbolCollection;
+    constructor(string memory _name, string memory _symbol) {
+        _nameCollection = _name;
+        _symbolCollection = _symbol;
+    }
+
+    // 2. name: devuelve el nombre de la coleccion
+    function name() public view returns(string memory) {
+        return _nameCollection;
+    }
+
+    // 3. symbol: devuelve el simbolo de la collecion
+    function symbol() public view returns(string memory) {
+        return _symbolCollection;
+    }
+
+    // 5. safeMint: acuña un NFT a un address. secuencial.  un argumento: to (address)
+            // * es safe porque verifica que el recipiento, si es un SC, puede manejar NFTs
+            // 5.1 ownerOf: me devuelve quien es el duenio de un tokenId
+                // un argumento: tokenId(uint256)
+
+    /**
+        tokenId     |       addresses
+        0           |         Lee
+        1           |         Lee
+        2           |         Pedro
+        3           |         Jhon
+        mapping(uint256 => address) _owners;
+    */
+    mapping(uint256 => address) _owners;
+    uint256 counter;
+    function safeMint(address to) public {
+        uint256 tokenId = getCurrentCounter();
+        
+        _owners[tokenId] = to;
+        _balances[to]++;
+        
+        incCounter();
+
+        // hacer el checking
+        require(_checkOnERC721Received(address(0), to, tokenId, ""), "El recipiente no soporta NFTs");
+
+        emit Transfer(address(0), to, tokenId);
+    }
+    function ownerOf(uint256 tokenId) public view returns(address) {
         return _owners[tokenId];
     }
 
-    function name() public view returns (string memory) {
-        return _name;
-    }
+    // 4. burn: quema el NFT. lo pasa al address 0. un argumento: tokenId(uint256)
+            // * si otra persona tiene permiso, lo puede quemar
+    function burn(uint256 tokenId) public {
+        // si le dio permiso
+        address segundoDuenio = _aprobadoParaUno[tokenId];
 
-    function symbol() public view returns (string memory) {
-        return _symbol;
-    }
+        // si es el duenio
+        address owner = _owners[tokenId];
 
-    function getApproved(uint256 tokenId)
-        public
-        view
-        returns (address operator)
-    {
-        require(_exists(tokenId), "No tiene duenio el NFT");
-        return _tokenApprovals[tokenId];
-    }
-
-    function tokenURI(uint256 tokenId) public view returns (string memory) {
-        // verify if tokenURI exists
-        require(_exists(tokenId), "No tiene duenio el NFT");
-
-        // retrieves tokenURI from baseURI
-        return
-            bytes(_baseURI()).length == 0
-                ? ""
-                : string(
-                    abi.encodePacked(_baseURI(), tokenId.toString(), ".json")
-                );
-    }
-
-    function transferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) public {
-        // verificar approval
-        _isApprovedOrOwner(msg.sender, tokenId);
-        _transfer(from, to, tokenId);
-    }
-
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) public virtual override {
-        safeTransferFrom(from, to, tokenId, "");
-    }
-
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId,
-        bytes memory data
-    ) public {
-        // verify that caller is approved to transfer
-        _isApprovedOrOwner(msg.sender, tokenId);
-        _safeTransfer(from, to, tokenId, data);
-    }
-
-    function approve(address to, uint256 tokenId) public {
-        require(_owners[tokenId] != to, "No se aprueba al mismo duenio");
-        require(msg.sender == _owners[tokenId], "No es el duenio del token");
-
-        _approve(to, tokenId);
-    }
-
-    function setApprovalForAll(address operator, bool _approved) public {
-        _setApprovalForAll(msg.sender, operator, _approved);
-    }
-
-    function isApprovedForAll(address owner, address operator)
-        public
-        view
-        returns (bool)
-    {
-        return _operatorApprovals[owner][operator];
-    }
-
-    function _setApprovalForAll(
-        address owner,
-        address operator,
-        bool approved
-    ) internal {
-        require(owner != operator, "No se aprueba al duenio");
-        _operatorApprovals[owner][operator] = approved;
-        emit ApprovalForAll(owner, operator, approved);
-    }
-
-    function _approve(address to, uint256 tokenId) internal {
-        _tokenApprovals[tokenId] = to;
-        emit Approval(_owners[tokenId], to, tokenId);
-    }
-
-    function _safeTransfer(
-        address from,
-        address to,
-        uint256 tokenId,
-        bytes memory data
-    ) internal {
-        _transfer(from, to, tokenId);
+        // si tiene el permios de TODOS los NFTs
+        bool permisoTotal = _approbadoTodos[owner][msg.sender];
+        
         require(
-            _checkOnERC721Received(from, to, tokenId, data),
-            "No implemento para recibir ERC721 tokens"
+            msg.sender == owner || segundoDuenio == msg.sender || permisoTotal , 
+            "No eres el duenio para quemar el NFT o no tienes permiso"
         );
+        
+        _owners[tokenId] = address(0);
+        _balances[msg.sender]--;
+
+        emit Transfer(msg.sender, address(0), tokenId);
     }
 
-    function _transfer(
-        address from,
-        address to,
-        uint256 tokenId
-    ) internal {
-        require(_owners[tokenId] == msg.sender, "No es el duenio");
+    // 6. approve: da permiso a una cuenta de manejar UN NFT
+        // dos argumentos: to (address), tokenId(uint256)
+        // 6.1 getApproved: me indica quien es el operador de UN nft con el tokenId
+            // un argumento: tokenId(uint256)
+    
+    /** El segundo "duenio"
+        tokenId     |       addresses
+        0           |         Lee
+        1           |         Lee
+        2           |         Pedro
+        3           |         Jhon
+        mapping(uint256 => address) _aprobadoParaUno;
+    */
+    mapping(uint256 => address) _aprobadoParaUno;
+    function approve(address operator, uint256 tokenId) public {
+        require(msg.sender != operator, "No puedes darte permiso (a ti mismo)");
 
-        // claer approval
-        _approve(address(0), tokenId);
+        address owner = _owners[tokenId];
+        require(msg.sender == owner, "No eres el duenio del NFT");
 
-        _balances[from] -= 1;
-        _balances[to] += 1;
+        _aprobadoParaUno[tokenId] = operator;
+
+        emit Approval(msg.sender, operator, tokenId);
+    }
+    function getApproved(uint256 tokenId) public view returns(address) {
+        return _aprobadoParaUno[tokenId];
+    }
+
+    // 7. transferFrom: transfiere un NFT usando el tokenId, de una cuenta from a una cuenta to.
+            // 3 argumentos: from(address), to(address), tokenId(uint256)
+    function transferFrom(address from, address to, uint256 tokenId) public {
+        // si le dio permiso de un NFT
+        address segundoDuenio = _aprobadoParaUno[tokenId];
+        
+        // si es el duenio
+        address owner = _owners[tokenId];
+        
+        // si le dio permiso de TODOS los NFTs
+        bool permisoTotal = _approbadoTodos[owner][msg.sender];
+        
+        require(
+            msg.sender == owner || segundoDuenio == msg.sender || permisoTotal, 
+            "No eres el duenio del NFT o no tienes permiso"
+        );
+
         _owners[tokenId] = to;
+        _balances[from]--;
+        _balances[to]++;
 
         emit Transfer(from, to, tokenId);
     }
-
-    // returns the path to IPFS
-    function _baseURI() internal pure returns (string memory) {
-        return "ipfs://QmPz8pTK2kdAmAZGvbuRLJpKAhg4ojAdbXdtZKetigsjZY/";
+    function safeTransferFrom(address from, address to, uint256 tokenId) public {
+        safeTransferFrom(from, to, tokenId, "");
     }
 
-    // verify if it exista
-    function _exists(uint256 _tokenId) internal view returns (bool) {
-        return _owners[_tokenId] != address(0);
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public {
+        transferFrom(from, to, tokenId);
+        // adicional hace un checking
+        require(_checkOnERC721Received(from, to, tokenId, data), "El recipiente no soporta NFTs");
     }
 
-    function _isApprovedOrOwner(address spender, uint256 tokenId)
-        internal
-        view
-        returns (bool)
-    {
-        return (spender == _owners[tokenId] ||
-            isApprovedForAll(_owners[tokenId], spender));
+    // 10. setApprovalForAll: otorga el permiso a todos los NFTs de una cuenta
+            // 2 argumentos: operator (address), approved(bool)
+            // * approved: true => da permiso, false => quita permiso
+            // 10.1 isApprovedForAll: me devuelve el address que puede operar todos los NFTs
+                // 2 argumentos: owner (address), operator(address)
+    /**
+(duenios de NFTS)               Pedro               Juan              Carlos
+        Lee                      Sí                 No                  Sí
+        Marcos                  NO                  No                  No  
+        Jhon                    Sí                  Sí                  Sí
+        owner => operator => approved
+        mapping(address => mapping(address => bool)) _approbadoTodos;
+    */
+    mapping(address => mapping(address => bool)) _approbadoTodos;
+    function setApprovalForAll(address operator, bool approved) public {
+        require(msg.sender != operator, "No puedes darte permiso (a ti mismo)");
+
+        _approbadoTodos[msg.sender][operator] = approved;
+        
+        emit ApprovalForAll(msg.sender, operator, approved);
     }
+    function isApprovedForAll(address owner, address operator) public view returns(bool) {
+        return _approbadoTodos[owner][operator];
+    }
+
+    // 11. tokenURI: nos devuelve (de manera dinámica) la ruta de la metadata para un tokenId
+        // un argumento: tokenId(uint256)
+    string baseURI = "ipfs://QmVZkuCVeMStEYnYj1vFYDEdggwoQ2evHFn7wmj97RMUmf/";
+    function tokenURI(uint256 tokenId) public view returns(string memory) {
+        return string(
+            abi.encodePacked(baseURI, tokenId.toString(), ".json")
+        );
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    //////                                      HELPERS                                       //////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 
     function _checkOnERC721Received(
         address from,
@@ -3416,7 +3696,7 @@ contract MiPrimerNFT is IERC721 {
         uint256 tokenId,
         bytes memory data
     ) private returns (bool) {
-        if (to.code.length > 0) {
+        if (to.code.length > 0) { // esto valida que es un SC
             try
                 IERC721Receiver(to).onERC721Received(
                     msg.sender,
@@ -3439,33 +3719,41 @@ contract MiPrimerNFT is IERC721 {
                 }
             }
         } else {
-            return true;
+            return true; // sino se trata de un EOA
         }
+    }
+
+    function getCurrentCounter() internal view returns(uint256) {
+        return counter;
+    }
+
+    function incCounter() internal {
+        counter++;
     }
 }
 ```
 
 **Generación de Imágenes usando HashLips**
 
-​ Imagen creada con software de generación de imágenes usando capas superpuestas.
+ Imagen creada con software de generación de imágenes usando capas superpuestas. Descargar la librearía [HashLips art engine](https://github.com/HashLips/hashlips_art_engine).
 
 ![image-20221027154305989](https://user-images.githubusercontent.com/3300958/198416372-384d1216-24be-4fad-9e7a-a66cbbb27441.png)
 
 _Carpeta `layers`_
 
-​ El punto de partida para la generación de NFTs, es la creación de capas a combinar. Cada NFT se puede descomponer en diferentes capas superpuestas. Estas capas se pueden combinar de manera aleatoria o incluir ciertos parámetros para asegurar que ciertas capas se repitan menos que otras.
+ El punto de partida para la generación de NFTs, es la creación de capas a combinar. Cada NFT se puede descomponer en diferentes capas superpuestas. Estas capas se pueden combinar de manera aleatoria o incluir ciertos parámetros para asegurar que ciertas capas se repitan menos que otras.
 
-​ Por lo general, dichas capas son creadas en programas de edición de imágenes. Es importante que dicha capa mida en ancho y largo que cualquier otra capa y que, además, mantengan un fondo transparente permitir la visibilidad de una capa inferior.
+ Por lo general, dichas capas son creadas en programas de edición de imágenes. Es importante que dicha capa mida en ancho y largo que cualquier otra capa y que, además, mantengan un fondo transparente permitir la visibilidad de una capa inferior.
 
-​ En dicha carpeta `layers`, se crea una carpeta por cada capa a usar. En dicha carpeta pueden existir varias imágenes. El orden de las capas a combinar se configura en el archivo `config.js`. Los nombres de dichas imágenes tienen un formato especial que contribuye con la cantidad de veces que se repetirá.
+ En dicha carpeta `layers`, se crea una carpeta por cada capa a usar. En dicha carpeta pueden existir varias imágenes. El orden de las capas a combinar se configura en el archivo `config.js`. Los nombres de dichas imágenes tienen un formato especial que contribuye con la cantidad de veces que se repetirá.
 
-​ El format es como sigue: `Black#1.png` `High#20.png`. Se guardan los archivos seguidos de un `#` y un número que representa su rareza. Si el valor de la rareza es mayor, su repetición en las imágenes será mayor.
+ El format es como sigue: `Black#1.png` `High#20.png`. Se guardan los archivos seguidos de un `#` y un número que representa su rareza. Si el valor de la rareza es mayor, su repetición en las imágenes será mayor.
 
 ![image-20221027134429840](https://user-images.githubusercontent.com/3300958/198416370-eacae6e7-5f6c-4156-84e2-a4ed13d8b3e9.png)
 
 _Archivo `src/config.js`_
 
-​ Este es el único archivo que se tiene que cambiar para poder crear una colección. La configuración más importante se da en la siguiente variable del archivo `config.js`:
+ Este es el único archivo que se tiene que cambiar para poder crear una colección. La configuración más importante se da en la siguiente variable del archivo `config.js`:
 
 ```javascript
 const layerConfigurations = [
@@ -3489,17 +3777,17 @@ const layerConfigurations = [
 ];
 ```
 
-​ La variable `layerConfigurations` es un array de objectos en el que cada objeto representa una combinación diferente de capas. Se pueden considerar tantas capas como se desee. Las capas a usar se encuentran ya creadas en la carpeta `layers`, cuya creación se debe hacer con anterioridad a crear las imágenes.
+ La variable `layerConfigurations` es un array de objectos en el que cada objeto representa una combinación diferente de capas. Se pueden considerar tantas capas como se desee. Las capas a usar se encuentran ya creadas en la carpeta `layers`, cuya creación se debe hacer con anterioridad a crear las imágenes.
 
-​ Cada objeto (combinación de capas) tiene dos propiedades: `growEditionSizeTo` y `layersOrder`. La primera variable (`growEditionSizeTo`) indica la cantidad de NFTs que se desea crear (puede ser un número grande como 10,000). La segunda variable (`layersOrder`) es un array que especifica las capas a usar y además el orden que se ubicarán las capas para crear los NFTs.
+ Cada objeto (combinación de capas) tiene dos propiedades: `growEditionSizeTo` y `layersOrder`. La primera variable (`growEditionSizeTo`) indica la cantidad de NFTs que se desea crear (puede ser un número grande como 10,000). La segunda variable (`layersOrder`) es un array que especifica las capas a usar y además el orden que se ubicarán las capas para crear los NFTs.
 
-​ _Nota: en el caso en que exitan varias combinaciones de capas, la variable `growEditionSizeTo` de cada objeto debe incluir el conteo del anterior._
+ _Nota: en el caso en que exitan varias combinaciones de capas, la variable `growEditionSizeTo` de cada objeto debe incluir el conteo del anterior._
 
-​ En el ejemplo mostrado, se ha considera una sola combinación de capas. En dicha combinación, se especifica que se generarán cinco NFTs. Las capas a usar y el orden están descritas en `layersOrder`. El nombre de las capas descritas en `layersOrder`, debe corresponder con el nombre de las carpetas que se encuentran en la carpeta `layers`.
+ En el ejemplo mostrado, se ha considera una sola combinación de capas. En dicha combinación, se especifica que se generarán cinco NFTs. Las capas a usar y el orden están descritas en `layersOrder`. El nombre de las capas descritas en `layersOrder`, debe corresponder con el nombre de las carpetas que se encuentran en la carpeta `layers`.
 
 _Generando los NFTs via terminal_
 
-​ Para generar las imágenes que serán parte de los NFTs, ejecutar el siguiente comando desde el terminal en la carpeta raíz: `node index.js`. Al hacerlo, se producirá el siguiente resultado:
+ Para generar las imágenes que serán parte de los NFTs, ejecutar el siguiente comando desde el terminal en la carpeta raíz: `node index.js`. Al hacerlo, se producirá el siguiente resultado:
 
 ```
 Created edition: 1, with DNA: 092b37710d6bfc92aa049d4b05accc841e7c22fd
@@ -3509,21 +3797,21 @@ Created edition: 4, with DNA: 594219bfa83c650c4811a0db3ad0c2ec03f5bdf2
 Created edition: 5, with DNA: 749f101fac6b14a3ad2024d979ad264167b8f104
 ```
 
-​ Al mismo, tiempo, notar que se ha creado una cartepa que se llama `build` que contiene dos carpetas: `images` y `json`. En la primera carpeta se guardan las imágenes generadas del resultado de combinar capas. La segunda carpeta guarda la metadata de cada imagen generada.
+ Al mismo, tiempo, notar que se ha creado una cartepa que se llama `build` que contiene dos carpetas: `images` y `json`. En la primera carpeta se guardan las imágenes generadas del resultado de combinar capas. La segunda carpeta guarda la metadata de cada imagen generada.
 
-​ Cada imagen posee su correspondiente archivo de metadata que ayuda a describirlo.
+ Cada imagen posee su correspondiente archivo de metadata que ayuda a describirlo.
 
-​ Al ejecutar el comando otra vez, se generará otro set de imágenes diferentes al anterior producto de la aleatoreidad.
+ Al ejecutar el comando otra vez, se generará otro set de imágenes diferentes al anterior producto de la aleatoreidad.
 
 _¿Qué es la `metadata`?_
 
-​ Según la [documentación de Open Sea](https://docs.opensea.io/docs/metadata-standards), la metadata de cada imagen guardada en los archivos json, ayuda a describir los atributos y características de cada NFT para poder entender mejor su naturaleza.
+ Según la [documentación de Open Sea](https://docs.opensea.io/docs/metadata-standards), la metadata de cada imagen guardada en los archivos json, ayuda a describir los atributos y características de cada NFT para poder entender mejor su naturaleza.
 
 ![image-20221027145906629](https://user-images.githubusercontent.com/3300958/198416371-b4dde17f-b7b7-4dd9-a090-32eb350c0d74.png)
 
-​ Dentro de cada archivo json hay un atributo llamado `attributes` que es un arary de todos los atributos que describen dicha imagen en particular. Dichos atributos se verán reflejados en los diferentes marketplaces que pueden leer la matadata desde el front-end.
+ Dentro de cada archivo json hay un atributo llamado `attributes` que es un arary de todos los atributos que describen dicha imagen en particular. Dichos atributos se verán reflejados en los diferentes marketplaces que pueden leer la matadata desde el front-end.
 
-​ Al generar los archivos json, notar que en el array `attributes`, se han creado dos atributos más: `trait_type` y `value`. `trait_type` ha adquirido el nombre de una carpeta de capas y `value` adquirió el nombre de uno de los archivos de esa carpeta capas. Veamos el siguiente ejemplo:
+ Al generar los archivos json, notar que en el array `attributes`, se han creado dos atributos más: `trait_type` y `value`. `trait_type` ha adquirido el nombre de una carpeta de capas y `value` adquirió el nombre de uno de los archivos de esa carpeta capas. Veamos el siguiente ejemplo:
 
 ```json
 "attributes": [
@@ -3534,11 +3822,11 @@ _¿Qué es la `metadata`?_
   //...
 ```
 
-​ Aquí, "Background" es el nombre de una carpeta capa y "Black" el nombre de un archivo de esa carpeta.
+ Aquí, "Background" es el nombre de una carpeta capa y "Black" el nombre de un archivo de esa carpeta.
 
 _El archivo `.json`_
 
-​ Además de los atributos arriba mencionados, los archivos de formato `.json` generados en `build`, tienen otras propiedades que se muestran a continuación:
+ Además de los atributos arriba mencionados, los archivos de formato `.json` generados en `build`, tienen otras propiedades que se muestran a continuación:
 
 ```json
 {
@@ -3560,7 +3848,7 @@ Siendo las más importantes:
 
 _Modificar la rareza de cada capa_
 
-​ Supongamos que dentro de la carpeta `layers`, tenemos la siguiente capa `Eyeball` y dentro hay cuatro opciones de imágenes con su respectiva rareza denotada después del `#`:
+ Supongamos que dentro de la carpeta `layers`, tenemos la siguiente capa `Eyeball` y dentro hay cuatro opciones de imágenes con su respectiva rareza denotada después del `#`:
 
 ```
 Eyeball
@@ -3574,7 +3862,7 @@ Se realiza una suma de todas las rarezas (10 + 20 + 30 + 40) y cada imagen apare
 
 _Crear las imágenes en orden aleatorio_
 
-​ Cuando se tienen varias configuraciones de capas en el objeto `layerConfigurations`, para lograr que las diferentes imágenes se produzcan en un orden aleatorio (y no en el orden en que fueron puestos en `layerConfigurations`), dentro del archivo `src/config.js`, alterar la siguiente variable.
+ Cuando se tienen varias configuraciones de capas en el objeto `layerConfigurations`, para lograr que las diferentes imágenes se produzcan en un orden aleatorio (y no en el orden en que fueron puestos en `layerConfigurations`), dentro del archivo `src/config.js`, alterar la siguiente variable.
 
 ```javascript
 const shuffleLayerConfigurations = true; // false => no cambiar el orden
@@ -3582,7 +3870,7 @@ const shuffleLayerConfigurations = true; // false => no cambiar el orden
 
 _Incrementar tamaño de imágenes_
 
-​ En el archivo `config.js` la variable `format` puede ser modificada para cambiar el tamaño de las imágenes. Incrementar o decrementar `width` o `height` para incrementar o decrementar la resolución de las imágenes:
+ En el archivo `config.js` la variable `format` puede ser modificada para cambiar el tamaño de las imágenes. Incrementar o decrementar `width` o `height` para incrementar o decrementar la resolución de las imágenes:
 
 ```javascript
 const format = {
@@ -3594,7 +3882,7 @@ const format = {
 
 _Incluir background en las imágenes_
 
-​ En el caso en que no se tenga una capa de background para las imágenes, la librería lo puede generar. La siguiente variable dentro del archivo `config.js` nos ayudará con ello:
+ En el caso en que no se tenga una capa de background para las imágenes, la librería lo puede generar. La siguiente variable dentro del archivo `config.js` nos ayudará con ello:
 
 ```javascript
 const background = {
@@ -3607,27 +3895,27 @@ const background = {
 
 _Tolerancia para la repetición_
 
-​ Si no existe una cantidad suficiente para generar imágenes, el sistema puede arrojar un error si la sensibilidad es alta. Para incrementar o disminuir la tolerancia, usar la siguiente variable:
+ Si no existe una cantidad suficiente para generar imágenes, el sistema puede arrojar un error si la sensibilidad es alta. Para incrementar o disminuir la tolerancia, usar la siguiente variable:
 
 ```javascript
 const uniqueDnaTorrance = 10000;
 ```
 
-​ Indica la cantidad de imágenes únicas que deben crearse antes de arrojar un error.
+ Indica la cantidad de imágenes únicas que deben crearse antes de arrojar un error.
 
 **Guardar imágenes en IPFS**
 
-​ Al correr el comando `node index.js`, se genera la carpeta `images` dentro de `build`. Abrimos la aplicación desktop de IPFS y nos dirigimos a `FILES` para poder arrastrar nuestra carpeta `images`.
+ Al correr el comando `node index.js`, se genera la carpeta `images` dentro de `build`. Abrimos la aplicación desktop de IPFS y nos dirigimos a `FILES` para poder arrastrar nuestra carpeta `images`.
 
 ![image-20221027171954458](https://user-images.githubusercontent.com/3300958/198416374-6fedb504-60fc-4d5a-8b4f-31a1a28b7db9.png)
 
-​ Notemos que el CID para esta carpeta es la siguiente: `QmfYqFm3NygtoX7kb7y9ukwV2Q9vF5UUdEKFUrCzn4Eb2f`. Este hash es importante porque apunta a la ubicación de nuestra carpeta dentro de IPFS y es requerido en los archivos json que contienen la metadata de las imágenes.
+ Notemos que el CID para esta carpeta es la siguiente: `QmfYqFm3NygtoX7kb7y9ukwV2Q9vF5UUdEKFUrCzn4Eb2f`. Este hash es importante porque apunta a la ubicación de nuestra carpeta dentro de IPFS y es requerido en los archivos json que contienen la metadata de las imágenes.
 
-​ Con el CID hallado, nos podemos dirigir a la siguiente ruta y encontrar las imágenes en IPFS: https://ipfs.io/ipfs/QmfYqFm3NygtoX7kb7y9ukwV2Q9vF5UUdEKFUrCzn4Eb2f
+ Con el CID hallado, nos podemos dirigir a la siguiente ruta y encontrar las imágenes en IPFS: https://ipfs.io/ipfs/QmfYqFm3NygtoX7kb7y9ukwV2Q9vF5UUdEKFUrCzn4Eb2f
 
 **Actualizando metadata con CID**
 
-​ Tenemos que actualizar la metadata con el nuevo CID generado en IPFS. Pasamos de:
+ Tenemos que actualizar la metadata con el nuevo CID generado en IPFS. Pasamos de:
 
 ```json
 {
@@ -3647,41 +3935,41 @@ a lo siguiente:
   //...
 ```
 
-​ Para lograr actualizar el CID en todos los archivos json, nos dirigimos al archivo `config.js` y actualizamos la variable `baseUri`:
+ Para lograr actualizar el CID en todos los archivos json, nos dirigimos al archivo `config.js` y actualizamos la variable `baseUri`:
 
 ```javascript
 const baseUri = "ipfs://QmfYqFm3NygtoX7kb7y9ukwV2Q9vF5UUdEKFUrCzn4Eb2f";
 ```
 
-​ Luego, corremos el siguiente comando para que se vea reflejado en los archivos json de metadata `node utils/update_info.js`.
+ Luego, corremos el siguiente comando para que se vea reflejado en los archivos json de metadata `node utils/update_info.js`.
 
 **Subiendo metadata a IPFS**
 
-​ Al correr el comando, se actualiza los archivos json. Arrastrar la carpeta a IPFS y copiar el CID
+ Al correr el comando, se actualiza los archivos json. Arrastrar la carpeta a IPFS y copiar el CID
 
 ![image-20221027175105353](https://user-images.githubusercontent.com/3300958/198416377-56a40d91-826d-4361-934c-3d23dbc99398.png)
 
-​ Para el archivo de metadata, el CID que nos arroja IPFS es `QmPz8pTK2kdAmAZGvbuRLJpKAhg4ojAdbXdtZKetigsjZY`. Usaremos este valor dentro del smart contract.
+ Para el archivo de metadata, el CID que nos arroja IPFS es `QmPz8pTK2kdAmAZGvbuRLJpKAhg4ojAdbXdtZKetigsjZY`. Usaremos este valor dentro del smart contract.
 
-​ Con el CID hallado, nos podemos dirigir a la siguiente ruta y encontrar los archivos metadata en IPFS: https://ipfs.io/ipfs/QmPz8pTK2kdAmAZGvbuRLJpKAhg4ojAdbXdtZKetigsjZY
+ Con el CID hallado, nos podemos dirigir a la siguiente ruta y encontrar los archivos metadata en IPFS: https://ipfs.io/ipfs/QmPz8pTK2kdAmAZGvbuRLJpKAhg4ojAdbXdtZKetigsjZY
 
 **Pinata**
 
-​ En muchas circunstancias, es necesario usar un tercer servicio que nos ayuda a mantener la información disponible. Incluso cuando hay nodos que están fuera de línea, Pinata nos ayudará a mantener dichos recursos online.
+ En muchas circunstancias, es necesario usar un tercer servicio que nos ayuda a mantener la información disponible. Incluso cuando hay nodos que están fuera de línea, Pinata nos ayudará a mantener dichos recursos online.
 
 _Subir recursos_
 
-​ Para subir recursos a Pinata, es posible hacerlo también usando el CID obtenido en IPFS. Seguir la siguiente ruta en [Pinata Manager](https://app.pinata.cloud/pinmanager):
+ Para subir recursos a Pinata, es posible hacerlo también usando el CID obtenido en IPFS. Seguir la siguiente ruta en [Pinata Manager](https://app.pinata.cloud/pinmanager):
 
 `Upload + > * CID > IPFS CID to Pin > Copiar y Pegar el CID > Search and Pin`
 
 _Ver recursos_
 
-​ Al finalizar la subida, se podrá visualizar los recursos en Pinata
+ Al finalizar la subida, se podrá visualizar los recursos en Pinata
 
 ![image-20221027180253186](https://user-images.githubusercontent.com/3300958/198416378-fc80da45-2f5a-4c9f-ba79-65214e2df4e2.png)
 
-​ Cabe notar que Pinata nos arroja diferentes links para acceder a los recursos:
+ Cabe notar que Pinata nos arroja diferentes links para acceder a los recursos:
 
 https://gateway.pinata.cloud/ipfs/QmfYqFm3NygtoX7kb7y9ukwV2Q9vF5UUdEKFUrCzn4Eb2f
 
@@ -3689,13 +3977,13 @@ y
 
 https://gateway.pinata.cloud/ipfs/QmPz8pTK2kdAmAZGvbuRLJpKAhg4ojAdbXdtZKetigsjZY
 
-​ Ya sea através del link provisto por IPFS o Pinata, podemos acceder a los recursos guardados en IPFS.
+ Ya sea através del link provisto por IPFS o Pinata, podemos acceder a los recursos guardados en IPFS.
 
 **Actualizando el Smart Contract**
 
-​ El contrato ERC721 posee un método que le permite leer los archivos de metadata guardados en IPFS. Dicho método es consultado para poder mostrar los atributos e imágenes guardados en IPFS.
+ El contrato ERC721 posee un método que le permite leer los archivos de metadata guardados en IPFS. Dicho método es consultado para poder mostrar los atributos e imágenes guardados en IPFS.
 
-​ Debemos modificar el siguiente método:
+ Debemos modificar el siguiente método:
 
 ```solidity
 function _baseURI() internal pure returns (string memory) {
@@ -3703,8 +3991,1599 @@ function _baseURI() internal pure returns (string memory) {
 }
 ```
 
-​ Una vez puesto el CID que apunta a los archivos metadata, el contrato puede ser publicado.
+ Una vez puesto el CID que apunta a los archivos metadata, el contrato puede ser publicado.
 
-_Primer mint_
+### Desarrollo de un script para deployment e interacción con el Smart Contract
 
-​ Realizar el primer mint
+Hardhat y Ethers trabajan en conjunto para ayudarnos en la publicación y verificación de smart contracts. En esta sección explicaremos el script usa las librerías Ethers y Hardhat parar lograr dichos objetivos.
+
+Hay al menos tres partes para la publicación de un smart contract:
+
+1. El archivo `hardhat.config.js`
+2. Script de deployment (definido en la carpeta `scripts`)
+3. Comando de deployment (usa una de las configuraciones de `hardhat.config.js`)
+
+<u>1- El archivo `hardhat.config.js`</u>
+
+Empecemos por entender el archivo `hardhat.config.js` en el cual se encuentra definido cierta configuración que nos ayudará con el deployment.
+
+```javascript
+require("@nomicfoundation/hardhat-toolbox");
+require("dotenv").config();
+
+/** @type import('hardhat/config').HardhatUserConfig */
+module.exports = {
+  solidity: "0.8.9",
+  networks: {
+    matic: {
+      url: process.env.MUMBAI_TESNET_URL,
+      accounts: [process.env.ADMIN_ACCOUNT_PRIVATE_KEY],
+      timeout: 0, // tiempo de espera para terminar el proceso
+      gas: "auto", // limite de gas a gastar (gwei)
+      gasPrice: "auto", // precio del gas a pagar (gwei)
+    },
+  },
+  etherscan: { apiKey: process.env.POLYGONSCAN_API_KEY },
+};
+```
+
+`solidity`: define la versión del compilador con la cual se compilarán los smart contracts a publicarse dentro del script de deployment.
+
+`url`: aquí se añaden los URL de los RPC nodes. Hay dos tipos: públicos y privados. Los RPC privados por lo general son provistos en la documentación de cada Blockchain. Por ejemplo en [Wiki Polygon](https://wiki.polygon.technology/docs/develop/metamask/config-polygon-on-metamask/) se menciona que el RPC es el siguiente: https://polygon-rpc.com/. Este RPC se usa tanto para leer y escribir información del blockchain. Sin embargo, en mi experiencia, muchas veces los RPC públicos tienen problemas de latencia  y errores inesperados (aunque con el tiempo se perfeccionan). Por ello, existen servicios privados de RPC de empresas que han construido sus propios nodos para conectarse al Blockchain. Por ejemplo [Alchemy](http://alchemy.com/), [Moralis](https://moralis.io/), [Infura](https://infura.io/), entre otros. Cada uno tiene otras funcionalidades que complementan el acceso a nodos de Blockchain mediante `remote procedure calls` (RPC).
+
+`accounts`: Hadhat require del uso de llaves privadas (una o más) para poder realizar firmas de los métodos que se llaman desde el script de deployment. Por ello, en `accounts` se agrega en un array la lista de llaves privadas. Desde el script de deployment, se puede acceder a cada una de las llaves públicas (addresses) de estas llaves privadas. Para lograr ello se usa el método: `var [cuenta1, cuenta2, ...] = await hre.ethers.getSigners();` . De este modo, se puede personalizar las firmas de los métodos a ser ejecutados desde el script de deployment.
+
+`timeout`: Define la cantidad de tiempo a esperar antes de que el script de deployment falle. Si se especifica `0`, el tiempo a esperar es indefinido. Aunque se fije `0` en este campo, el escaner, que es con quien se interactúa para la publicación de smart contracts, puede devolver un `timeout`. En dichas situaciones la verificación si el smart ctract se llegó a publicar o no se realizará manualmente.
+
+`gas`: Define un cantidad límite de gas a gastar en cada transacción. Se puede usar particularmente cuando se tiene presupuestos de gas estrictos. Una de dichas transacciones a rastrear es el costo de publicar un smart contract en el blockchain. Si el campo `gas` tiene un número, se usa como límite. En cambio, si se define como `auto`, el gas se estima automáticamente para cada transacción.
+
+`gasPrice`: Define un precio del gas a pagar para el total del gas a gastar en cada transacción. El valor de `gasPrice` está unidades de `wei`. Un `wei` es la más pequeña denominación de Ether. `1 Eth = 10^18 wei`. Si `gasPrice` se define como `auto`, el precio se calcula automáticamente. De otro mado, el número definido en `gasPrice` será el que prima.
+
+`etherscan`: Aquí se incluye la el `API KEY` que obtiene en el escáner de cada Blockchain (e.g. [PolygonScan](https://polygonscan.com/)). Crear una cuenta en el Escáner y dirigirte a `API-KEYs` para poder crear una. Sin este `API KEY`, no se puede automatizar la verificación de smart contracts. El no tenerlo, no impide su publicación. Dicho `API KEY` puede ser obtenido en 
+
+<u>2- El script de deployment e interacción</u>
+
+Desarrollar scripts implica el poder crear una automatización para publicar los smart contracts desarrollados y, lo más importante, poder ejecutar métodos del smart contract de configuración post publicación. 
+
+Este script de deployment, cuando es utilizado en testnets, facilita la publicación iterativa de smart contracts. Es ideal para el desarrollo incremental de funcionalidades de smart contracts, así como también agiliza la publicación de smart contracts luego del arreglo de bugs.
+
+*Script de deployment*
+
+Para comenzar, se crea un archivo dentro de la carpeta `scripts`. Vamos publicar dos smart contracts que tienen las siguientes interfaces:
+
+```solidity
+// nombre del smart contract: MiPrimerToken
+interface IMiPrimerToken {
+    function mint(address to, uint256 amount) external;
+    function burn(address to, uint256 amount) external;
+}
+
+// nombre del smart contract: AirdropONE
+interface IAirdropONE {
+    function participateInAirdrop() external;
+    function quemarMisTokensParaParticipar() external;
+    function addToWhiteList(address _account) external;
+    function removeFromWhitelist(address _account) external;
+    function setTokenAddress(address _tokenAddress) external;
+}
+```
+
+Usaremos los métodos definidos en las interfaces como guía para poder ejecutarlos de ser necesarios. Vamos a publicar el contrato `AirdroipONE.sol` que tiene una dependencia con `MiPrimerToken.sol` dado que el contrato de airdrop reparte tokens.
+
+Dentro de la carpeta `scripts` creamos el archivo `deployAirdropOne.js` (`$ touch deployAirdropOne.js`). En la cabecera importamos `hardhat` en la variable `hre`. Si se usan variables secretas en `.env`, ejecutar `config()`. Dentro de la función `main` se desarrollarán
+
+```javascript
+// deployAridropOne.js
+const hre = require("hardhat");
+require("dotenv").config();
+
+async function main() {
+  // desarrollar el script
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+```
+
+En primer lugar publicaremos el contrato `MiPrimerToken.sol`. Este smart contract tiene el siguiente constructor: `constructor (string memory _name, string memory _symbol)`, por lo tanto, ambos argumentos del constructor deben ser incluidos en el script de deployment.
+
+```javascript
+// deployAirdropOne.js
+async function main() {
+  // Definiendo los argumentos del constructor: name y symbol
+  var name = "Mi Primer Token"; // 1er argumento
+  var symbol = "MPRTKN"; // 2do argumento
+  
+  // 'getContractFactory(arg: nombre del smart contract)'
+  //   - Obtiene el código del smart contract
+  //   - Se usa el nombre exacto del smart contract como arg
+  var MiPrimerToken = await hre.ethers.getContractFactory("MiPrimerToken");
+  
+  // Se crea una instancia del contrato
+  // Para su inicialización, se pasa los argumentos del constructor
+  var miPrimerToken = await MiPrimerToken.deploy(name, symbol);
+
+  // Obtenemos el address del smart contract
+  console.log("MiPrimerToken Address", miPrimerToken.address);
+  
+  // El smart contract se publica en testnet/mainnet
+	// Capturamos el resultado en 'tx'
+  var tx = await miPrimerToken.deployed();
+
+  // El smart contract es confirmado por cinco bloques
+  // Necesario para poder interactuar con el smart contract
+  // La publicación implica guardar el bytecode del smart contract en el blockchain
+  // Esperar ayuda a propagar la información en todo el blockchain
+  await tx.deployTransaction.wait(5);
+}
+// ...
+```
+
+### Testing de Contratos Inteligentes
+
+El testing de contratos inteligentes implica la validación y verificación de su lógica. Un contrato inteligente, una vez publicado, no tiene manera de ser corregido en caso se encontraran fallas técnicas. Ello implica poner mucho énfasis en el testeo de casos típicos y, especialmente, en los casos especiales o extremos.
+
+Como guía, un contrato inteligente debería considerar las siguientes validaciones:
+
+1. Lógica de funcionamiento de un método
+2. Los `require` son disparados en las condiciones correctas
+3. Los eventos se emiten en los métodos correctos con la información esperada
+4. Los modifiers cumplen el papel correcto de protección o validación de lógica adicional no incluida en el método
+
+Al usar etheres para el desarrollo de casos de prueba, los siguientes métodos son los más usados:
+
+```javascript
+// 'something' debe ser true
+expect(something).to.be.true;
+
+// 'something' es igual a 'something2'
+expect(something).to.be.equal(something2) 
+
+// la transacción 'tx' que pertenece al contrato 'smartContract'
+// emite un evento del nombre 'nombreDelEvento'
+// con los siguientes argumentos: arg1, arg2 y arg3
+await expect(tx).to.emit(smartContract, nombreDelEvento).withArgs(arg1, arg2, arg3);
+
+// el método 'métodoDeSmartContract' al ser llamado debe fallar
+// con el mensaje de 'mensajeDeRequire'
+await expect(métodoDeSmartContract).to.revertedWith(mensajeDeRequire)
+
+// el valor 'value1' debe ser cercano a el valor 'value 2'
+// con una diferencia por encima o por debajo de un valor 'delta'
+expect(value1).to.be.closeTo(value2, delta);
+```
+
+### Front-end y Smart Contracts
+
+Vamos a contruir el front-end para el contrato inteligente de AirdropOne. Este contrato de AirdropOne implica también el interactuar con el contrato del token ERC20.
+
+Pasos:
+
+1. Convertir los contratos en actualizables, tanto el AirdropOne como el token ERC20 (opcional)
+2. Crear la libreria agnóstica para interactuar desde el front-end con los smart contracts
+3. Crear un front minimalista para interactuar con la librería de los smart contracts
+
+
+
+Desarrollo:
+
+1
+
+Contrato token Acualizable:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+
+contract TokenUpgradeableAirdrop is
+    Initializable,
+    ERC20Upgradeable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable
+{
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    bytes32 public constant BURNER_ROLE = keccak256("BURNER_ROLE");
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
+        string memory _name,
+        string memory _symbol
+    ) public initializer {
+        __ERC20_init(_name, _symbol);
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+
+        _mint(msg.sender, 100000 * 10 ** decimals());
+
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(PAUSER_ROLE, msg.sender);
+        _grantRole(MINTER_ROLE, msg.sender);
+    }
+
+    function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
+        _mint(to, amount);
+    }
+
+    function burn(address from, uint256 amount) public onlyRole(BURNER_ROLE) {
+        _burn(from, amount);
+    }
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyRole(MINTER_ROLE) {}
+}
+```
+
+Contrato Airdrop actualizable:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
+interface IMiPrimerTKN {
+    function mint(address to, uint256 amount) external;
+
+    function burn(address from, uint256 amount) external;
+
+    function balanceOf(address account) external view returns (uint256);
+}
+
+contract AirdropONEUpgradeable is
+    Initializable,
+    PausableUpgradeable,
+    AccessControlUpgradeable,
+    UUPSUpgradeable
+{
+    bytes32 public constant PAUSER_ROLE = keccak256("PAUSER_ROLE");
+
+    uint256 public constant totalAirdropMax = 10 ** 6 * 10 ** 18;
+    uint256 public constant quemaTokensParticipar = 10 * 10 ** 18;
+
+    uint256 airdropGivenSoFar;
+
+    address public miPrimerTokenAdd;
+
+    mapping(address => bool) public whiteList;
+    mapping(address => bool) public haSolicitado;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _tokenAddress) public initializer {
+        miPrimerTokenAdd = _tokenAddress;
+        __AccessControl_init();
+        __UUPSUpgradeable_init();
+
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(PAUSER_ROLE, msg.sender);
+    }
+
+    function participateInAirdrop() public whenNotPaused {
+        // lista blanca
+        require(whiteList[msg.sender], "No esta en lista blanca");
+
+        // ya solidito tokens
+        require(!haSolicitado[msg.sender], "Ya ha participado");
+
+        // pedir numero random de tokens
+        uint256 tokensToReceive = _getRadomNumberBelow1000();
+
+        // verificar que no se exceda el total de tokens a repartir
+        require(
+            airdropGivenSoFar + tokensToReceive <= totalAirdropMax,
+            "No hay tokens disponibles"
+        );
+
+        // actualizar el conteo de tokens repartidos
+        airdropGivenSoFar += tokensToReceive;
+        // marcar que ya ha participado
+        haSolicitado[msg.sender] = true;
+
+        // transferir los tokens
+        IMiPrimerTKN(miPrimerTokenAdd).mint(msg.sender, tokensToReceive);
+    }
+
+    function quemarMisTokensParaParticipar() public whenNotPaused {
+        // verificar que el usuario aun no ha participado
+        require(haSolicitado[msg.sender], "Usted aun no ha participado");
+
+        // Verificar si el que llama tiene suficientes tokens
+        uint256 balanceToken = IMiPrimerTKN(miPrimerTokenAdd).balanceOf(
+            msg.sender
+        );
+        require(
+            balanceToken >= quemaTokensParticipar,
+            "No tiene suficientes tokens para quemar"
+        );
+
+        // quemar los tokens
+        IMiPrimerTKN(miPrimerTokenAdd).burn(msg.sender, quemaTokensParticipar);
+
+        // dar otro chance
+        haSolicitado[msg.sender] = false;
+    }
+
+    ///////////////////////////////////////////////////////////////
+    ////                     HELPER FUNCTIONS                  ////
+    ///////////////////////////////////////////////////////////////
+
+    function addToWhiteList(
+        address _account
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        whiteList[_account] = true;
+    }
+
+    function removeFromWhitelist(
+        address _account
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        whiteList[_account] = false;
+    }
+
+    function pause() public onlyRole(PAUSER_ROLE) {
+        _pause();
+    }
+
+    function unpause() public onlyRole(PAUSER_ROLE) {
+        _unpause();
+    }
+
+    function _getRadomNumberBelow1000() internal view returns (uint256) {
+        uint256 random = (uint256(
+            keccak256(abi.encodePacked(block.timestamp, msg.sender))
+        ) % 1000) + 1;
+        return random * 10 ** 18;
+    }
+
+    function setTokenAddress(address _tokenAddress) external {
+        miPrimerTokenAdd = _tokenAddress;
+    }
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyRole(DEFAULT_ADMIN_ROLE) {}
+}
+```
+
+### Contratos Actualizables
+
+​	El código compilado (bytecode) de un contrato inteligente no puede ser cambiado una vez que es publicado. Para ciertos casos de uso, esto es ideal dado que se asegura la inmutabilidad de las reglas planteadas en el contrato inteligente. Lo cual crea un caracter de predictibilidad a las transacciones. Sin embargo, otros protocoles más complejos y evolutivos podrían requerir mayor flexbilidad.
+
+​	La estrategia de Proxy permite a los desarrolladores reemplazar la lógica de un contrato incluso después de que se haya publicado. Se utiliza la estrategia Proxy para los siguientes escenarios:
+
+* Desarrollo orgánico (evolutivo): si se logra reemplazar la lógica de un contrato ya publicado para agregar mayores funcionalidades, se crea valor para el proyecto. Incluso más si ello no implica tener que migrar lo usuarios, balances y demás información guardada en el smart contract.
+* Publicaciones más económicas: en ciertos escenarios se publican múltiples veces el mismo smart contract. Usando la estrategia Proxy, se puede, significativamente, reducir el costo de publicación. Ello porque la lógica del contrato solo tiene que ser publicada una sola vez.
+* Límites en el tamaño de código: Solo se pueden publicar smart contracts que estén por debajo de 24KB en peso, lo cual puede representar una gran limitante para proyectos grandes. Cuando la lógica se esparse en múltiples contratos, se puede circunvalar esa limitación.
+
+ ¿Cómo funciona?
+
+​	La estrategia de proxys se basa en la utilización de dos funcionalidaddes de Solidity: delegatecall y fallback functions.
+
+**delegatecall()**
+
+​	Una llamada normal de función a otro contrato (objetivo) en Solidity usará internamente `address.call()` o `address.staticcall()`. Cualquier de estas dos funciones serán ejecutadas en el contexto del contrato que es llamado. Ello significa que estará accediendo a su propio estado (address, storage, balances, etc.)
+
+​	Sin embargo, si se llegara a usar `address.delegatecall()`, se llegará a ejecutar el código o lógica definido en `address` pero en el contexto del contrato que está llamando. Ello significa que se utilizarán el storage del contrato que está realiazando la llamada. Se realizarán lecturas y escrituras en el contrato que hace la llamada. Es como si se reemplazara el código del contrato que está llamando por el código del contrato siendo llamado dentro del contexto del primero.
+
+​	Indaguemos `address.delegatecall()` con un ejemplo. Notar que para que esta estrategia funcione  el storage layout (orden en que se definen las variables y los tipos de variables) debe ser el mismo en todos los smart contracts a usarse.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+// REQUSITO: Ambos contratos tienen el mismo storage layout
+// Publicar en primer lugar el contrato 'contratoASerLlamado'
+
+// En el contrato 'contratoQueVaALlamar',
+// se ejecuta el método 'addToWhitelist'
+// Al hacerlo, se escribe sobre 'contratoQueVaALlamar'
+// usando el código de 'contratoASerLlamado'
+
+contract contratoASerLlamado {
+    mapping(address => bool) public whitelist;
+    function addToWhitelist(address _account) external {
+        whitelist[_account] = true;
+    }
+}
+
+contract contratoQueVaALlamar {
+    mapping(address => bool) public whitelist;
+    function addToWhitelist(address _scAddress, address _account) external {
+        (bool success, bytes memory data) = _scAddress.delegatecall(
+            abi.encodeWithSignature("addToWhitelist(address)", _account)
+        );
+
+        if (!success) {
+            revert(string(data));
+        }
+    }
+}
+```
+
+En este ejemplo: 
+
+1. El address del deployer para este ejemplo es: `0x5B38Da6a701c568545dCfcB03FcB875f56beddC4`
+2. Publicamos el contrato `contratoASerLlamado`. Obtenemos su address. Digamos que es `0xd9145CCE52D386f254917e481eB44e9943F39138`.
+
+3. Publicamos el otro contrato `contratoQueVALlamar` y obtenemos el address `0xd8b934580fcE35a11B58C6D73aDeE468a2833fa8`
+4. Desde el contrato `contratoQueVaALlamar` ejecutamos el método `addToWhitelist(address _scAddress, address _account)` con los siguientes argumentos: `addToWhitelist(0xd9145CCE52D386f254917e481eB44e9943F39138,0x5B38Da6a701c568545dCfcB03FcB875f56beddC4)`. Es decir, como primer agumento pasamos el address del smart contract que será llamado. Como segundo argumento pasamos el address del deployer.
+5. Dado que el mapping `whitelist` es público ambos contratos, podemos usar su getter para poder leer su información. Haré la consulta haciendo uso del address del deployer para ver los resultados en ambos smart contracts.
+6. Resultado en `contratoASerLlamado`: `mapping(0x5B38Da6a701c568545dCfcB03FcB875f56beddC4)`. Resultado false.
+7. Resultado en `contratoQueVaALlamar`: `mapping(0x5B38Da6a701c568545dCfcB03FcB875f56beddC4)`. Resultado true.
+
+De esta manera, hemos logrado ejecutar el código de un contrato dentro del contexto de otro contrato a través de `delegatecall()`.
+
+**The fallback function**
+
+​	En Solidity,  un `fallback function` es ejecutado si es que ninguna de las otras funciones coincide con el identificador de función siendo llamado. Hay dos maneras de definir el `fallback function`:
+
+1. `fallback() external [payable]`
+2. `fallback(bytes calldata _input) external [payable] returns(bytes memory _output)`
+
+​	En ambos casos se be marcar como `external` y no se debe agregar el keyword `function` antes de definir el `fallback function`. Además, éste, puede ser `virtual`, ser sobreescrito y también llevar uno o varios `modifier`.
+
+​	En primer lugar entendamos cómo funciona el método `fallback` en un smart contract. Desde el contrato `Llamante`, llamaremos a un método inexistente en `ContratoConFallback`. Ello para demostrar que cuando ningún método de un smart contract coincide con el que está siendo llamado, su `fallback function` atrapa esa llamada.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+interface IContratoConFallback {
+    function metodoNoExiste() external;
+}
+
+// Nosotros
+contract Llamante {
+    // Ambos métodos producen los mismos efectos
+    function llamarContratoFallback(address _scAddress) external {
+       IContratoConFallback(_scAddress).metodoNoExiste();
+    }
+    function llamarContratoFallback2(address _scAddress) external {
+        (bool success, ) = _scAddress.call(
+            abi.encodeWithSignature("metodoNoExiste()")
+        );
+        require(success, "Error en la llamada al Proxy");
+    }
+}
+
+// Proxy
+contract ContratoConFallback {
+    uint256 public counter;
+    fallback() external {
+    	counter++;
+    }
+}
+```
+
+En este ejemplo:
+
+1. Publicamos el contrato `ContratoConFallback` y obtenemos el siguiente address: `0xD4Fc541236927E2EAf8F27606bD7309C1Fc2cbee`.
+2. Publicamos el contrato `Llamante` y obtenemos el siguiente address: `0x5FD6eB55D12E759a21C09eF703fe0CBa1DC9d88D`.
+3. En el contrato `Llamante` ejecutamos el método `llamarContratoFallback` usando como argumento el address de `ContratoConFallback`: `llamarContratoFallback(0xD4Fc541236927E2EAf8F27606bD7309C1Fc2cbee)`
+4. Al ejecutar ese método, estamos llamando un método inexistente en `ContratoConFallback`, lo cual será atrapado por su `fallback function`. Al ser llamado el `fallback`, el counter se incrementará en cada vez.
+
+​	Vamos un paso más allá. Para poder utilizar la estrategia de Proxies, necesitamos hacer uso del argumento y valor de retorno de la función `fallback`. Veamos cuáles son:
+
+`fallback(bytes calldata _input) external [payable] returns(bytes memory _output)`
+
+* `_input`: captura toda la data enviada al contrato. Es decir, si por ejemplo, se intentase ejecutar el método inexistente `.transfer(320)` de un smart contract, dentro del `fallback`, `_input` representaría el ABI-encoded de esa llamada. Ello incluye tener el selector del método más los argumentos pasados a dicho método.
+* `_output`: tener `returns` en el `fallback` permite que el consumidor de éste método pueda obtener un resultado a raíz de cualquier proceso que suceda dentro de la función `fallback`, incluso si ello implica hacer una llamada a otro contrato que a su vez retorna valores. Dentro del `fallback`, el valor del `_output` puede ser asignado para representar el valor de retorno del `fallback`. 
+
+<u>Nota:</u> incluir el keyword `payable` es opcional en caso se desee recibir Ether a través del `fallback function`. Si este es el caso, solo se limitará a gastar 2300 de gas para como presupuesto para ejecutar el método `fallback`. Sin embargo, es recomendable usar el método `receive` para habilitar que el smart contract reciba Ether. Usar `receive` y `fallback` en el mismo smart contract, ayuda a diferenciar el uso particular de cada uno Con `receive` se podrá recibir Ether en el smart contract y claramente quitarle ese rol al `fallback function`.
+
+En el siguiente ejemplo veremos cómo usar la función `fallback` usando su argumento y valor de retorno:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+// Nosotros
+contract Llamante {
+    bytes public argCodified = abi.encodeWithSignature(
+        "metodoNoExiste(uint256)", 123456
+    );
+    uint256 public resultFromCallback;
+
+    function llamarContratoFallback2(address _scAddress) external {
+        (bool success, bytes memory output) = _scAddress.call(argCodified);
+        require(success, "Error en la llamada al Proxy");
+        
+        // decodificando el resultado que viene de fallback
+        resultFromCallback = abi.decode(output, (uint256));
+    }
+}
+
+// Proxy
+contract ContratoConFallback {
+    uint256 public counter;
+    bytes public input;
+    
+    fallback(bytes calldata _input) external returns(bytes memory _output){
+        input = _input;
+    	counter++;
+        _output = abi.encode(counter);
+    }
+}
+```
+
+1. Al hacer llamadas intercontratos, internamente dicha llamada se realizar usando `.call`. Para explicar este ejemplo, hacemos una llamada intercontrato en `_scAddress.call(argCodified)`. Aquí `argCodified` es un argumento codificado que incluye tanto la functión (selector) como también sus argumentos.
+
+2. En solidity se puede codificar la función junto con sus argumentos usando `abi.encodeWithSignature`. Usando este método, juntamos en un solo valor (del tipo `bytes`) tanto el método a ser llamada como los argumentos que recibe ese método. Por ello hacemos lo siguiente: 
+
+   ```solidity
+   bytes public argCodified = abi.encodeWithSignature(
+       "metodoNoExiste(uint256)", 123456
+   );
+   ```
+
+3. Al ejectuar el método `llamarContratoFallback2` en el contrato `Llamante`, se realiza la llamada intercontrato. Al usar el método `.call` en `_scAddress.call`, obtenemos dos resultados: `bool success ` y ` bytes memory output`. Estos dos resultados tienen dos escenarios posibles:
+
+   1. Llamada intercontrato exitosa: en este caso, el primer valor de retorno (`bool success`), será `true`. Adicionalmente, el segundo valor de retorno (`bytes memory output`), podría contener un valor de retorno del método que fue llamada en el otro contrato. Éste valor de retorno estará codificado y para decodificarlo, se puede usar `abi.decode`.
+   2. Llamada intercontrato fallida: aquí, el primer valor de retorno (`bool success`), será `false`. El segundo valor de retorno, (`bytes memory output`), podría contener el error si éste se dio en un `require` o `revert` en el método del contrato que fue llamado. Para poder propagar el error dentro del contrato `Llamante`, se require del uso de `assembly`.
+
+**El patrón Proxy**
+
+​	El usuario en vez de interactuar con el contrato de lógica, se comunica con el contrato Proxy. El contrato proxy delega el llamado al contrato de lógica.
+
+![image-20221129151316211](https://user-images.githubusercontent.com/3300958/209394155-9f0e94c1-e334-4cb6-84db-279cd18dc55c.png)
+
+​	El contrato de implementación puede ser reemplazado por futuras versiones cuando se desee. Eso se viene a llamar la actualización de un contrato.
+
+​	El contrato proxy contiene dentro el address del contrato a donde está delegando las llamadas. Con el objetivo de actualizar la lógica a través del tiempo, debe existir un método que permite actualizar el address del contrato lógica. 
+
+​	Dicho método es `upgradeTo(newImplementation) onlyAdmin` y se define dentro de uno de los smart contracts (ya sea en el Proxy o en la implementación). Como se puede notar, este método debe estar protegido de alguna manera. 
+
+​	De hecho, dependiendo en dónde pongámos este método, utilizaremos un tipo diferente de actualización.
+
+![image-20221129160147344](https://user-images.githubusercontent.com/3300958/209394361-e419d387-319d-4b90-a169-9e9b9b33fb95.png)
+
+​	Si dicho método es puesto en el Proxy, usamos el tipo `Transparent`. Si lo colocamos en la `Implementation`, se trataría del tiop `UUPS`.
+
+<u>Transparent Proxy</u>
+
+​	En este tipo, el contrato Proxy, además de delegar las llamadas al contrato de implementación, también contiene la lógica de actualización del smart contract. El método `upgradeTo`, se define aquí. Si el admin llama el proxy, se le muestra la interface de actualización. Si otro usuario que no sea el admin llama al proxy, se muestra la interface de delegación. Adicional al Proxy y la Implementación, en este tipo, se añade un tercer smart contract que es el Admin smart contract. 
+
+![image-20221129161451120](https://user-images.githubusercontent.com/3300958/209394376-ea6f49db-c31d-4b22-aad3-80f1045b588c.png)
+
+​	Es este smart contract que decide qué interface mostrar al que se está comunicando con el Proxy smart contract. Una deficiencia de este este método, es que el Admin Smart Contract tiene que comunicarse con el Proxy para poder determinar quién lo está llamando. El Proxy guarda las interfaces y dependiendo de quién lo llama, mostrará una interfaz diferente. Esta lógica tiene que suceder cada vez que alguien llama al Poxy. Ello incrementa los costos de acceso.
+
+​	Después de las actualizaciones de Istanbul and Berlin, los costos para guardar en storage se incrementaron.
+
+<u>UUPS Proxy</u>
+
+​	En la propuesta EIP-1822 se documenta el tipo de Proxy en el que la lógica de actualizaci se guarda en la Implementación. 
+
+![image-20221129161838738](https://user-images.githubusercontent.com/3300958/209394388-c8f22faa-d48b-4491-a1db-7f2248ee5058.png)
+
+​	La razón por la cual se puede definir el método de actualización `upgradeTo` en la Implementación, es porque a traves de `delegatecall` se puede ejecutar un método de smart contract dentro de otro.
+
+​	Ello implica que cada vez que se crea una nueva versión de implementación, el método `upgradeTo` se tiene que volver a incluir. No incluirlo eliminaría la posibilidad de seguir actualizando los contratos en el futuro.
+
+<u>Transparent vs UUPS</u>
+
+![image-20221129162222418](https://user-images.githubusercontent.com/3300958/209394401-1846d965-57a2-42f4-80ba-0e89948ec307.png)
+
+1. Proxy Deployment: Usando el método `Transparent` es más costoso dados los tres contratos requeridos para su funcionamiento.
+2. Implementation Deployment: En el método `UUPS`, la lógica de actualización se incluye en la implementación y las futuras actualizaciones. Ello lo hace más costoso.
+3. Runtime overhead: En el método `Transparent`, hay una comunicación entre tres contratos, lo cual lo hace más costos. Mientras que en `UUPS`, solo hay dos contratos en comunicación. Ello genera el ahorro en gas.
+
+**Contratos Actualizables**
+
+​	Empezaremos desde cero en la creación de un contrato actualizable.  A cada paso explicaremos las modificaciones necesarias para convertir un contrato no actualizable a uno que sí lo es.
+
+¿Qué herramientas requerimos?
+
+- OpenZeppelin Upgradeable Contracts
+  - UUPSUpgradeable
+  - Ownable
+- OpenZeppelin Upgrades Plugins
+  - Chequeos de seguridad
+  - Publicación
+
+Utilizaremos una librería adicional llamada `@openzeppelin/hardhat-upgrades`. Corremos los siguientes comandos en el terminal:
+
+`$ npm install --save-dev @openzeppelin/hardhat-upgrades`
+
+`$ npm install --save @openzeppelin/contracts-upgradeable`
+
+En el archivo `hardhat.config.js`, incluimos en la cabecera la siguiente línea que importará los métodos necesarios para hacer publicación de contratos inteligentes actualizables:
+
+`require("@openzeppelin/hardhat-upgrades");`
+
+¿Cómo convertir a un smart contract en actualizable?
+
+1
+
+Dirigirte al wizard y crear el contrato de un token ERC20.
+
+```solidity
+// UpgradeableToken.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract UpgradeableToken is ERC20 {
+    constructor() ERC20("UpgradeableToken", "UPGRDTKN") {
+        _mint(msg.sender, 100000 * 10 ** decimals());
+    }
+}
+```
+
+2
+
+Desarrollamos un conjunto de pruebas simples que verifican el nombre y símbolo del smart contract (que aún no es actualizable)
+
+```javascript
+// testUpgradeableToken.js
+const { expect } = require("chai");
+
+describe("UPGRADEABLE TOKEN", function () {
+  var UpgradeableToken;
+  var upgradeableToken;
+  var name = "UpgradeableToken";
+  var symbol = "UPGRDTKN";
+
+  describe("Set Up", () => {
+    it("Publicar los contratos", async () => {
+      UpgradeableToken = await hre.ethers.getContractFactory(
+        "UpgradeableToken"
+      );
+      upgradeableToken = await UpgradeableToken.deploy();
+    });
+  });
+
+  describe("Nombre y símbolo", () => {
+    it("Verifica nombre del token", async () => {
+      var nameToken = await upgradeableToken.name();
+      expect(nameToken).to.be.equal(name);
+    });
+
+    it("Verifica symbolo del token del token", async () => {
+      var symbolToken = await upgradeableToken.symbol();
+      expect(symbolToken).to.be.equal(symbol);
+    });
+  });
+});
+```
+
+Ejecutamos este test y evaluamos que las pruebas pasen: `npx hardhat test ./testUpgradeableToken.js`.
+
+Hasta aquí, notaremos que estamos ejecutando las pruebas de un contrato no actualizable.
+
+Ahora, incorporemos el script de los contatos actualizables. Realicemos el siguiente reemplazo:
+
+```javascript
+// upgradeableToken = await UpgradeableToken.deploy();
+      upgradeableToken = await hre.upgrades.deployProxy(UpgradeableToken);
+```
+
+Al hacerlo, estamos indicando que el contrato `UpgradeableToken` se convierta en actualizable. Ademá, estamos usando otro método de `hardhat` que es `upgrades.deployProxy`.
+
+Sin embargo, notaremos que nos arroja el siguiente error:
+
+```
+Error: Contract `contracts/UpgradeableToken.sol:UpgradeableToken` is not upgrade safe
+
+contracts/UpgradeableToken.sol:7: Contract `UpgradeableToken` has a constructor
+    Define an initializer instead
+    https://zpl.in/upgrades/error-001
+
+@openzeppelin/contracts/token/ERC20/ERC20.sol:54: Contract `ERC20` has a constructor
+    Define an initializer instead
+    https://zpl.in/upgrades/error-001
+```
+
+Este error se basa en el hecho que los contratos actualizables no pueden tener constructores. Ello por el simple hecho que los constructores no se ejecutarán en el contexto del Proxy. Es por ello que se necesita un método especial para las inicializaciones.
+
+Retoquemos el contrato del token `UpgradeableToken.sol` para ajustarlo a un contrato actualizable.
+
+```solidity
+// UpgradeableToken.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+
+contract UpgradeableToken is Initializable, ERC20Upgradeable {
+    function initialize() public initializer {
+        __ERC20_init("UpgradeableToken", "UPGRDTKN");
+        _mint(msg.sender, 100000 * 10 ** decimals());
+    }
+}
+```
+
+Veamos los cambios realizados hasta el momento:
+
+1. Cambiamos el constructor por otro método llamada `initialize`. Se define como `public` y además tiene un modificador llamado `initializer`. A través de este modificador garantizamos que este método sea llamado una sola vez (como si fuera un constructor), solo que en este caso este método sí se ejecutará en el contexto del Proxy.
+2. El contrato `UpgradeableToken` ahora hereda dos contratos que son apropiados para convertir el token en actualizable. `Initializable` provee el modifier `initializer`. `ERC20UPgradeable` es un contrato de token ERC20 adaptado para no tener constructor. Es por ello que se usa un método especial `__ERC20_init` para configurar el nombre y símbolo del token.
+
+Luego de realizar estos cambios, volvemos a ejecutar los tests con el comando  `npx hardhat test ./testUpgradeableToken.js` y deberían estar pasando.
+
+Cabe notar que el tipo de Proxy que hemos ustado hasta el momento es del tipo `Transparent`. Sin embargo, ahora se considera una buena práctica usar `UUPS`. Ello implica un ligero cambio en nuestro script de deployment.
+
+```javascript
+      // upgradeableToken = await hre.upgrades.deployProxy(UpgradeableToken);
+      upgradeableToken = await hre.upgrades.deployProxy(UpgradeableToken, {
+        kind: "uups",
+      });
+```
+
+De este modo, hacemos explícito el usar el model `UUPS` para la publicación. Volvemos a ejecutar el comando `npx hardhat test ./testUpgradeableToken.js` y obtendremos el siguiente error: 
+
+```
+Error: Contract `contracts/UpgradeableToken.sol:UpgradeableToken` is not upgrade safe
+
+contracts/UpgradeableToken.sol:7: Implementation is missing a public `upgradeTo(address)` function
+    Inherit UUPSUpgradeable to include this function in your contract
+    @openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol
+    https://zpl.in/upgrades/error-008
+```
+
+Dado que estamos usando el modelo `UUPS`, el error nos sugiere que nos falta implementar el método llamado `upgradeTo(address)`, el cual nos garantizará que nuestro smart contract sea actualizable en el futuro. El error también nos sugiere que incluyamos `UUPSgradeable` en el contrato.
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
+contract UpgradeableToken is
+    Initializable,
+    ERC20Upgradeable,
+    UUPSUpgradeable,
+    OwnableUpgradeable
+{
+    function initialize() public initializer {
+        __ERC20_init("UpgradeableToken", "UPGRDTKN");
+        _mint(msg.sender, 100000 * 10 ** decimals());
+    }
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
+}
+```
+
+Al incluir el contrato `UUPSUpgradeable` como sugerido, nos pedirá a su vez que definamos el método `_authorizeUpgrade`. Sin embargo, para poder proteger este método de ser llamado por cualquier address, utilizamos el modifier `onlyOwner` para poder protegerlo. Esto último nos conlleva a importar tambié el contrato `OwnableUpgradeable.sol`, que es la versión actualizable de `Ownable.sol`. Ahora sí podemos correr los tests y deberían pasar sin problemas.
+
+Ahora definamos una nueva implementación para nuestro token. En esta nueva lógica, incluyamos el método `mint` que antes no estaba incluido. Esta nueva lógica se vería así:
+
+```solidity
+contract UpgradeableToken2 is
+    Initializable,
+    ERC20Upgradeable,
+    UUPSUpgradeable,
+    OwnableUpgradeable
+{
+    function initialize() public initializer {
+        __ERC20_init("UpgradeableToken", "UPGRDTKN");
+        _mint(msg.sender, 100000 * 10 ** decimals());
+    }
+
+    // nuevo método
+    function mint(address to, uint256 amount) public onlyOwner {
+        _mint(to, amount);
+    }
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
+}
+```
+
+Ahora, definamos la manera en cómo actualizar el contrato. La nueva lógica de deployment se vería así:
+
+```javascript
+const { expect } = require("chai");
+
+describe("UPGRADEABLE TOKEN", function () {
+  var UpgradeableToken;
+  var upgradeableToken;
+  var UpgradeableToken2;
+  var upgradeableToken2;
+  var name = "UpgradeableToken";
+  var symbol = "UPGRDTKN";
+
+  var owner, alice;
+
+  before(async () => {
+    [owner, alice] = await hre.ethers.getSigners();
+  });
+
+  describe("Set Up", () => {
+    it("Publicar los contratos", async () => {
+      UpgradeableToken = await hre.ethers.getContractFactory(
+        "UpgradeableToken"
+      );
+      // upgradeableToken = await UpgradeableToken.deploy();
+      // upgradeableToken = await hre.upgrades.deployProxy(UpgradeableToken);
+      upgradeableToken = await hre.upgrades.deployProxy(UpgradeableToken, {
+        kind: "uups",
+      });
+
+      var implmntAddress = await upgrades.erc1967.getImplementationAddress(
+        upgradeableToken.address
+      );
+      console.log("El Proxy address es (V2):", upgradeableToken.address);
+      console.log("El Implementation address es (V2):", implmntAddress);
+    });
+  });
+
+  describe("Nombre y simbolo", () => {
+    it("Verifica nombre del token", async () => {
+      var nameToken = await upgradeableToken.name();
+      expect(nameToken).to.be.equal(name);
+    });
+
+    it("Verifica symbolo del token del token", async () => {
+      var symbolToken = await upgradeableToken.symbol();
+      expect(symbolToken).to.be.equal(symbol);
+    });
+  });
+
+  describe("Actualiza Smart Contract", () => {
+    it("Publica Smart Contract", async () => {
+      UpgradeableToken2 = await hre.ethers.getContractFactory(
+        "UpgradeableToken2"
+      );
+
+      upgradeableToken2 = await hre.upgrades.upgradeProxy(
+        upgradeableToken,
+        UpgradeableToken2
+      );
+
+      var implmntAddress = await upgrades.erc1967.getImplementationAddress(
+        upgradeableToken.address
+      );
+      console.log("El Proxy address es (V2):", upgradeableToken2.address);
+      console.log("El Implementation address es (V2):", implmntAddress);
+    });
+
+    it("Ejecuta el método mint de V2", async () => {
+      var MIL_TOKENS = hre.ethers.utils.parseEther("1000");
+      await upgradeableToken2.mint(alice.address, MIL_TOKENS);
+
+      expect(await upgradeableToken2.balanceOf(alice.address)).to.be.equal(
+        MIL_TOKENS
+      );
+
+      console.log(
+        (await upgradeableToken2.balanceOf(owner.address)).toString()
+      );
+    });
+  });
+});
+```
+
+Lo más resaltante a notar es cómo a través de `hre.upgrades.upgradeProxy`, podemos volver a publicar una nueva lógica para nuestro contrato `UpgradeableToken`.
+
+## DEFI
+
+Si hoy en día podemos enviar un correo electrónico a cualquier persona, ¿por qué no podemos enviar dinero así de fácil? ¿O por qué no podemos ofrecerles un préstamo del mismo modo? Estos son los fundamentos de las finanzas decentralizadas. 
+
+#### ¿Qué es DeFi?
+
+Es un ecositema de aplicaciones financieras que se construyen encima del blockchain. Su principal propuesta de valor es la de operar de una manera descentralizada. Ello implica que no existan intermediarios como bancos, proveedores de servicios pago o fondos de inversión. 
+
+Hasta el momento van acumulados más de dos billones de dólares en aplicaciones DeFi que ofrecen los siguientes servicios: préstamos, servicios de cambio de criptomonedas, creación de monedas estables, tokenización de servicios y activos, derivados y otros instrumentos financieros. En general se tratan de servicios financieros ofrecidos a través del blockchain que remueven al intermdiario.
+
+#### ¿Cómo se construyen los servicios financieros?
+
+El ladrillo más pequeño en el mundo de DeFi son los contratos inteligentes. Estos contratos inteligentes posee código que ejecuta las funciones financieras principales. Dichas funciones son las siguientes: pagos a través de criptomonedas, créditos, apalancamientos, intercambios de criptomonedas, otorgamiento de seguro, trading, entre otras. Todas las funciones se ofrecen de manera decentralizada y sin intermediarios.
+
+Los smart contracts que ofrecen estas funciones financieras principales se les conoce como primitivos financieros. Es más, cualquier producto establecido en el actual mundo financiero, puede tener su paralelo en DeFi. En teoría, se puede programar una gran variedad de casos de uso.
+
+El valor creado por DeFi es que estos primitivos financieros permiten crear ecosistemas de servicios. Se juntan como piezas de lego según se necesite.
+
+#### Stack de DeFi
+
+![image-20221221141949961](https://user-images.githubusercontent.com/3300958/209394425-e125685a-fe5f-450b-a7f9-d14026993cfa.png)
+
+#### DeFi vs Wall Street
+
+DeFi se presenta como una alternativa al sistema financiera tradicional. Está construido desde sus raíces de una manera decentralizada, de bajo costo, automatizada y anti censura.
+
+En DeFi no se necesita tener permiso y cualquier persona puede contribuir con código de nuevas funcionalidades o usar los protocolos de código abierto existentes. No importa el estatus social o el lugar de origen, que sí son importantes y determinan el grado de acceso a diferentes servicios bancarios en el sistema financiero tradicional. Por ejemplo, ciertos derivados solo pueden ser manejados por grandes instituciones financieras.
+
+En DeFi, todas las transacciones son transparentes y pueden ser rastreadas, mientras que en Wall Street, las instituciones funcionan como cajas negras y los usuarios confían en ellas, aunque éstas mismas son altamente eficientes. 
+
+#### Capas en DeFi
+
+DeFi se puede dividir en cinco diferentes capas (según Schar):
+
+![image-20221221164913754](https://user-images.githubusercontent.com/3300958/209394448-85e7456f-4c1b-4514-b7a0-131e948e5bcc.png)
+
+1. Settlement Layer: representado por el blockchain que maneja operaciones de contabilidad,  mantiene el acceso a los fondos y ejecuta las transacciones. Aquí es donde se aplican modelos de consenso para asegurar la integridad y seguridad de una manera decentralizada
+2. Asset Layer: se pueden crear y tranzar diferentes activos digitales encima del Blockchain. Estos activos digitales tienen la función de ser unidades de valor y medios de intercambio. Adicional a ello, DeFi permite que los usuarios se conviertan en proveedores de servicios dado que usuario puede proveer activos a una aplicación DeFi para su funcionamiento. 
+3. Protocol Layer: aquí se incluyen contratos inteligentes que proveen una solución estandarizada o servicio. Por ejemplo, el de proveer un servicio completo de intercambio de criptomonedas. Los protocolos tienen una aplicación variada y deterministica basada en código. Algunos ejemplos son: casa de cambio, derivados y préstamos.
+4. Application Layer: Los contratos inteligentes o protocolos son usados como backend para una solución web con una interfaz amigable. Estas aplicaciones permiten hacer los servicios de DeFi más accesible a una audiencia mayor.
+5. Aggregation Layer: agrega servicios que pueden ser técnicamiente independientes uno de otro. También son aplicaciones decentralizadas que proveen más utilidad si combinan varias aplicaciones. Por ejemplo el de combinar varios servicios de seguro en una sola plataforma.
+
+#### Aplicaciones y Casos de Uso
+
+![image-20221221173558113](https://user-images.githubusercontent.com/3300958/209394464-e1261745-0a22-4c88-92f4-8a1bb9bae29c.png)
+
+**Stablecoins**
+
+Muchos tokens están sujetos a la especulación, manipulación de mercado. Otros poseen baja liquidez. Ello contribuye a que muchos tokens padezcan de severas fluctuaciones en el precio, lo cual obstaculiza usar el token como medio de intercambio. Un medio de intercambio requiere cierta estabilidad en el precio que involucra la gestión de la oferta y demanda de un activo, normalmente llevado a cabo por un banco.
+
+Para solucionar este problema, las monedas estables han surgido con el propósito de proveer un intercambio estable vinculadas a un valor en específico (e.g. como el dolar americano). Su principal propuesta es minimizar la volatilidad para su uso en servicios y productos financieros. Su existencia, incrementará la adopción de aplicaciones de DeFi.
+
+**Casas de cambio decentralizadas**
+
+Una casa de cambios tradicional se basa en libros de órdenes. Esta entidad centralizada se encarga de almacenar órdenes de compra y venta para luego juntar una orden de compra y otra de orden de venta que tienen la misma cantidad y precio. 
+
+Los DEXes más populares operan bajo algoritmos de AMM. Existe un pool de liquidez que contiene los dos pares de tokens a tranzar. Este pool actúa como la parte que hace el intercambio de tokens entre dueños. El AMM determina el precio a pagar por el intercambio basado en la cantidad de de tokens a cambiar y el ratio de activos que existen en el pool de liquidez. 
+
+Cada vez que se hace un intercambio de tokens en el pool de liquidez, implica que un token incremente en cantidad y otro disminuya, lo cual cambia el ratio de activos dentro del pool de liquidez.
+
+La liquidez de cada pool es creado por los proveedores de liquidez, quienes se encargan de proveer dos activos al pool usando al el ratio de tokens actual.
+
+Si se da la posibilidad de que existan discrepancias en los precios de los tokens en diferentes DEXes, dicha brecha es eliminada a través del arbitraje que se encarga de mantener los precios en equilibrio.
+
+**Préstamos**
+
+Las personas pueden depositar sus cripto activos en contratos inteligentes y ganar intereses variables por sus depósitos. A su vez, otras personas tomarán estos activos como préstamos que incluyen intereses por pagar. Todos los activos a ser solicitados como préstamos, incluyen un colateral que asegure la liquidez del primero. Este colateral existe dado que no hay una evaluación crediticia inicial.
+
+Aunque la sobre colateralización socava la idea de financiación, en realidad, estos protocolos son usados para proveer una utilidad financiera adicional. Se puede utilizar estos tipos de préstamos para hacer short sells y leveraged longs.
+
+En la actualidad, Aave es la más grande aplicación de préstamos que tiene fondos bloqueados que ascienden a los cinco billones de dólares (2022).
+
+La tasa de interés se calcula de manera diferente. En Aave, está en función de la tasa de utilización. Es decir, depende de la cantidad de préstamos totales divididos por los depósitos totales. La función de interés puede ser linear, no linear. Es esta tasa de interés la principal motivación para que las personas presten sus activos digitales al protocolo
+
+**Seguros**
+
+Los contratos inteligentes pueden estar sujetos a hackeos y errores de código, incluso con una alta probabilidad. El seguro puede ayudar a mitigar ese riesgo.
+
+Los contratos inteligentes tienen el código publicado y cualquier persona puede obtenerlo para encontrar fallas y estrategias explotarlo. Entonces, los usuarios pueden comprar seguros para prevenir las pérdidas millonarias.
+
+[Arbol](https://www.arbol.io/) usa oráculos para obtener información relevante del clima para asegurar a los agricultores ante la eventual pérdida de sus cosechas si ciertos parámetros son cumplidos.
+
+Otro ejemplo es [Etheris](https://etherisc.com/) que automáticamente compensa a sus clientes cuando hay vuelos demorados.
+
+Implementar un seguro que sea púramente basado en contratos inligentes es muy complicado. Por ejemplo, ante un eventual hackeo, es muy difícil comprobar con solo código. Por lo general, se necesita un criteo externo que valide que dicho hackeo a sucedido.
+
+## **Uniswap**
+
+Uniswap es una casa de cambios decentralizada en el cual las personas pueden intercambiar Ether y otros tokens que fueron creados en la blockchain de Ethereum.
+
+Provee dos servicios en particular. El primero es que usuarios pueden proveer liquidez que permite crear pozos de pares de tokens para que otras personas realicen los intercambios. El segundo uso permite que los usuarios usen los pozos de tokens para poder intercambiar dos tokens diferentes.
+
+El incentivo para proveer de liquidez es que los inversionistas reciben una comisión de 0.3% por cada transacción de intercambio que se realiza en Uniswap.
+
+#### Publicando tokens
+
+Se publicarán dos tokens en la red Goerli para poder crear un pool de liquidez usándolo como un par en UNISWAP.
+
+El token A y token B tienen el siguiente contenido:
+
+```solidity
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract TokenA is ERC20, AccessControl {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
+    constructor() ERC20("TokenA", "TKNA") {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(MINTER_ROLE, msg.sender);
+    }
+
+    function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
+        _mint(to, amount);
+    }
+}
+
+contract TokenB is ERC20, AccessControl {
+    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
+    constructor() ERC20("TokenB", "TKNB") {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(MINTER_ROLE, msg.sender);
+    }
+
+    function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
+        _mint(to, amount);
+    }
+}
+```
+
+El objetivo es crear un pool que posea estos dos tokens para que otras personas puedan cambiar tokens A por tokens B y viceversa.
+
+En UNISWAP, una manera de crear dicho pool es ejecutando el método de añadir liquidez. Al hacerlo, automáticamente, se crea un pool (si es que este pool no existe) y además se hace el depósito de tokens en las cantidades que representarán el ratio entre tokens.
+
+#### Añadiendo liquidez
+
+Los usuarios pueden convertirse en proveedores de fondos para crear un pool de un par de tokens de modo que otras personas puedan realizar intercambios entre tokens de un mismo pool. Las personas que proveen liquidez reciben como beneficio las comisiones de intercambio de tokens.
+
+Para añadir liquidez de manera programática, vamos a interactuar con el contrato de Uniswap llamado `UniswapV2Router02`. El address de este contrato  es `0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D` en Ethereum. Existe un método en particular que permite proveer de liquidez llamado `addLiquidity` y tiene la siguiente forma:
+
+```solidity
+function addLiquidity(
+  address tokenA,
+  address tokenB,
+  uint amountADesired,
+  uint amountBDesired,
+  uint amountAMin,
+  uint amountBMin,
+  address to,
+  uint deadline
+) external returns (uint amountA, uint amountB, uint liquidity);
+```
+
+En la siguiente tabla, se definen todos los argumentos de este método:
+
+| Name                   | Type      | Description                                                  |
+| ---------------------- | --------- | ------------------------------------------------------------ |
+| tokenA                 | `address` | A pool token.                                                |
+| tokenB                 | `address` | A pool token.                                                |
+| amountADesired         | `uint`    | The amount of tokenA to add as liquidity if the B/A price is <= amountBDesired/amountADesired (A depreciates). |
+| amountBDesired         | `uint`    | The amount of tokenB to add as liquidity if the A/B price is <= amountADesired/amountBDesired (B depreciates). |
+| amountAMin             | `uint`    | Bounds the extent to which the B/A price can go up before the transaction reverts. Must be <= amountADesired. |
+| amountBMin             | `uint`    | Bounds the extent to which the A/B price can go up before the transaction reverts. Must be <= amountBDesired. |
+| to                     | `address` | Recipient of the liquidity tokens.                           |
+| deadline               | `uint`    | Unix timestamp after which the transaction will revert.      |
+| **Valores de retorno** |           |                                                              |
+| amountA                | `uint`    | The amount of tokenA sent to the pool.                       |
+| amountB                | `uint`    | The amount of tokenB sent to the pool.                       |
+| liquidity              | `uint`    | The amount of liquidity tokens minted.                       |
+
+En este método, `tokenA` y `tokenB` representan las addresses de los tokens a depositar. `amountADesired` y `amountBDesired` son los dos montos que se planean enviar al pool de liquidez. `amountAMin` y `amountBMin`, son las dos mínimas cantidades que tienen que ir en el pool, o de otra manera, la función fallará. 
+
+La razón por la cual se tienen monto deseado (`amountDesired`) y monto mínimo (`amountMin`) es para ayudar a mantener el pool con el mismo ratio de tokens en todo momento. Por ejemplo, se podría tener que el token A se está cambiando por el token B a un ratio de 1 a 1000. Es decir, 1 token A representa 1000 token B. Al añadir más liquidez, se debe guardar la misma proporción. Si solo se tiene para depositar 0.5 del token A y 2000 del token A, entonces, los montos mínimos a depositor de cada token sería 0.5 del token A y 1,000 del token B. Si se pasan como montos mínimos 0.5 del token A y 1,500 del token B, la función va a fallar.
+
+`to` es el address que recibirá los tokens de liquidity pool.
+
+`deadline` espeficica el timestamp después del cual la transacción fallará.
+
+Los valores de retorno son tres: `amountA` y `amountB` indican las cantidades de tokens que finalmente se depositaron en el pool de liquidez. `liquidity` indica la cantidad de tokens de liquidez recibes como resultado de haber creado el pool de liquidez. Estos tokens son enviados a `to`.
+
+Consideraciones adicionales:
+
+* El address llamante (msg.sender) debe dar allowance al router de Uniswap al menos las cantidades de `amountADesired` y `amountBDesired`. 
+* Es recomendable añadir los tokens en el ratio ideal
+* Si el pool del par de tokens no existe, uno se crea automáticamente. Adicional a ello, la cantidad exacta de `amountADesired` y `amountBDesired` de tokens son añadidos a dicho pool.
+
+*Interactuando con el Router de UNISWAP*
+
+En UNISWAP, existe un contrato que se encarga de crear pool y añadir liquidez llamado Router. Usaremos ese contrato y definiremos una interface para poder llamarlo.
+
+```solidity
+// Ethereum (mainnet y testnet)
+// address: 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
+interface IUniswapV2Router02 {
+    function addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint amountADesired,
+        uint amountBDesired,
+        uint amountAMin,
+        uint amountBMin,
+        address to,
+        uint deadline
+    ) external returns (uint amountA, uint amountB, uint liquidity);
+}
+```
+
+Adicionalmente, para poder obtener el contrato de pool donde se guardarán los tokens A y B, usaremos el contrato Factory de UNISWAP llamado `IUniswapV2Factory` que tiene el address de `0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f` en Ethereum. El método que nos permite saber el contrato de pool de liquidez se llama `getPair`.
+
+```solidity
+// Ethereum (mainnet y testnet)
+// address: 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f
+interface IUniswapV2Factory {
+    function getPair(
+        address tokenA,
+        address tokenB
+    ) external view returns (address pair);
+}
+```
+
+El contrato para añadir liquidez luce de la siguiente manera:
+
+```solidity
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+interface IUniswapV2Router02 {
+    function addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint amountADesired,
+        uint amountBDesired,
+        uint amountAMin,
+        uint amountBMin,
+        address to,
+        uint deadline
+    ) external returns (uint amountA, uint amountB, uint liquidity);
+}
+
+interface IUniswapV2Factory {
+    function getPair(
+        address tokenA,
+        address tokenB
+    ) external view returns (address pair);
+}
+
+// Address Token A: 0x52A525D4c44b0E0491c14CA7Ff5A45a3884c15B3
+// Address Token B: 0x89EC644A1224eC1595952D6f0b90c041A46a0765
+contract LiquidityPool {
+    // Router Goerli
+    address routerAddress = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    IUniswapV2Router02 router = IUniswapV2Router02(routerAddress);
+
+    address factoryAddress = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
+    IUniswapV2Factory factory = IUniswapV2Factory(factoryAddress);
+
+    IERC20 tokenA = IERC20(0x52A525D4c44b0E0491c14CA7Ff5A45a3884c15B3);
+    IERC20 tokenB = IERC20(0x89EC644A1224eC1595952D6f0b90c041A46a0765);
+
+    event LiquidityAdded(uint amountA, uint amountB, uint liquidity);
+
+    function addLiquidity(
+        address _tokenA,
+        address _tokenB,
+        uint _amountADesired,
+        uint _amountBDesired,
+        uint _amountAMin,
+        uint _amountBMin,
+        address _to,
+        uint _deadline
+    ) external returns (uint amountA, uint amountB, uint liquidity) {
+        // Approve the router to spend the token
+        tokenA.approve(routerAddress, _amountADesired);
+        tokenB.approve(routerAddress, _amountBDesired);
+
+        // Add liquidity
+        (amountA, amountB, liquidity) = router.addLiquidity(
+            _tokenA,
+            _tokenB,
+            _amountADesired,
+            _amountBDesired,
+            _amountAMin,
+            _amountBMin,
+            _to,
+            _deadline
+        );
+
+        emit LiquidityAdded(amountA, amountB, liquidity);
+    }
+
+    function getPair(
+        address _tokenA,
+        address _tokenB
+    ) external view returns (address pair) {
+        pair = factory.getPair(_tokenA, _tokenB);
+    }
+}
+```
+
+Luego de la publicación de este contrato en la red Goerli, obtenemos la siguiente address: `0x73E9D688842E6AbFaCe854fE7Fd880BE82ED6670`.
+
+El script de crear el pool y añadir liquidez, sería el siguiente:
+
+```javascript
+async function addLiquidity() {
+  var [owner] = await hre.ethers.getSigners();
+
+  var tokenAAdd = "0x52A525D4c44b0E0491c14CA7Ff5A45a3884c15B3";
+  var TokenA = await hre.ethers.getContractFactory("TokenA");
+  var tokenA = TokenA.attach(tokenAAdd);
+
+  var tokenBAdd = "0x89EC644A1224eC1595952D6f0b90c041A46a0765";
+  var TokenB = await hre.ethers.getContractFactory("TokenB");
+  var tokenB = TokenB.attach(tokenBAdd);
+
+  var liquidityPoolAdd = "0x73E9D688842E6AbFaCe854fE7Fd880BE82ED6670";
+  var LiquidityPool = await hre.ethers.getContractFactory("LiquidityPool");
+  var liquidityPool = LiquidityPool.attach(liquidityPoolAdd);
+
+  // Depositar tokens en el contrato que creará el pool de liquidez
+  var tx = await tokenA.mint(liquidityPoolAdd, pEth("10000"));
+  await tx.wait();
+  var tx = await tokenB.mint(liquidityPoolAdd, pEth("10000"));
+  await tx.wait();
+
+  // Definir un ratio
+  // 10 token A = 25 token B
+  // El pool se creará con los montos definidos en _amountAMin y _amountBMin
+
+  // Añadir liquidez
+  var _tokenA = tokenAAdd;
+  var _tokenB = tokenBAdd;
+  var _amountADesired = pEth("1000");
+  var _amountBDesired = pEth("2500");
+  var _amountAMin = pEth("1000");
+  var _amountBMin = pEth("2500");
+  var _to = owner.address;
+  var _deadline = new Date().getTime();
+  var tx = await liquidityPool.addLiquidity(
+    _tokenA,
+    _tokenB,
+    _amountADesired,
+    _amountBDesired,
+    _amountAMin,
+    _amountBMin,
+    _to,
+    _deadline
+  );
+  var res = await tx.wait();
+  console.log("Transaction Hash", res.transactionHash);
+}
+```
+
+La transaction hash es la siguiente [0xd883a4b3eb77778bcd7e6b098a33470907b02a617ef50908fb9b31190b70ff76](https://goerli.etherscan.io/tx/0xd883a4b3eb77778bcd7e6b098a33470907b02a617ef50908fb9b31190b70ff76). 
+
+Analicemos esta transacción:
+
+![image-20221222130535824](https://user-images.githubusercontent.com/3300958/209393419-235fb4f0-569c-4396-9837-20c63960f335.png)
+
+Observamos que del contrato han salido 1000 tokens A y 2500 tokens B. Así también, se ha depositado en el address del `owner` la cantidad de 1581 tokens que representan los tokens de liquidez. En el futuro, usando estos tokens de liquidez se puede retirar los tokens A y B que fueron depositados en el pool.
+
+Cada vez que se crea un par en UNISWAP, se crea también un contrato del pool de liquidez donde podemos recabar mayor información.
+
+Para encontrar el token de liquiez que representa al par, primero lo buscamos en el contrato `IUniswapV2Factory` de Uniswap. Lo encontramos en la siguiente address: [0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f](https://goerli.etherscan.io/address/0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f#readContract).
+
+Vamos a consultar el método `getPair` y pondremos los dos tokens (A y B) usados para crear el pair de tokens en el pool de liquidez.
+
+![image-20221222142131973](https://user-images.githubusercontent.com/3300958/209393416-a9569f9e-31d3-4aab-b493-3a4e5a889f89.png)
+
+Al hacerlo, obtendremos el address del contrato del pool de liquidez recientemente creado: [0xf2F57cd6Ef40789f36A9B418D8b6C79377e4F441](https://goerli.etherscan.io/address/0xf2F57cd6Ef40789f36A9B418D8b6C79377e4F441#readContract). En este contrato, vamos a revisar el método llamado `getReserves` que nos permitirá saber la cantidad de tokens en reserva. 
+
+![image-20221222142644754](https://user-images.githubusercontent.com/3300958/209393414-6f1f0456-89e4-4ef0-bb28-557f1fbce182.png)
+
+Se usarán estos montos para poder realizar los swaps.
+
+#### **Remover liquidez del pool**
+
+El método de remover liquidez, es el siguiente:
+
+```solidity
+function removeLiquidity(
+  address tokenA,
+  address tokenB,
+  uint liquidity,
+  uint amountAMin,
+  uint amountBMin,
+  address to,
+  uint deadline
+) external returns (uint amountA, uint amountB);
+```
+
+Este método ejecuta el proceso inverso de cuando se crea el pool de liquidez.
+
+#### Precio en Uniswap
+
+Uniswap no funciona mediante un libro de órdenes de venta. En cambio, Uniswap utiliza una fórmula llamada Automated Money Making (AMM)
+
+Empecemos definiendo la fórmula de constant product market: `X * Y = K`
+
+![image-20221222140713510](https://user-images.githubusercontent.com/3300958/209393418-d3917bf9-3362-4acd-8011-82e679830a05.png)
+
+En esta fórmula, podemos definir X como la cantidad de tokens A y Y como la cantidad de tokens B en un liquidity pool. Su multiplicación crea una constante llamada `K`. El producto de X y Y no cambia a través de los sucesivos intercambios que se hacen en el tiempo. Es decir, K no cambia.
+
+En la siguiente hoja de cálculo se muetra un ejemplo en concreto ([ver aquí](https://docs.google.com/spreadsheets/d/1FZDoDHXUUItG1Fiu0feDyY12QmRmp6m6tUn-LpWAPIM/edit?usp=sharing)).
+
+*Calculando la cantidad de tokens a recibir*
+
+En la siguiente fórmula, vamos a encontrar la cantidad exacta de token B (`dy`) a recibir en caso queramos entregar una cantidad `dx` de tokens B.
+
+![image-20221209184057381](https://user-images.githubusercontent.com/3300958/209394413-c790e50b-6f32-4fc6-973e-f3f38d527a3a.png)
+
+1. `X` representa la cantidad de tokens A y `Y` representa la cantidad de tokens B. 
+
+2. Sabemos que `X * Y = K` debe permanecer constante. Entonces, si `X` aumenta, `Y` debe disminuir.
+3. Incluyamos el aumento y disminución en X y Y: `(X + dx)(Y - dy) = K`
+4. Despejando la cantidad de Y a recibir tenemos que: `dy = Y * dx / (X + dx)`.
+5. Si incluimos la comisión del 3% cobrada por Uniswap al realizar un intercambio, obtenemos que: `dy = Y * (1 - 0.03) * dx / (X + (1 - 0.03) * dx)`
+
+Supongamos que queremos intercambiar 10 tokens A. Veamos cuantos tokens B puedo recibir según la fórmula:
+
+X (Q de A) = 1000
+
+Y (Q de B) = 2500
+
+dx = 10 token A
+dy = ?
+
+`dy = 2500 * 0.997 * 10 / (1000 + 0.997 * 10) = 24.6789...` 
+
+#### Swap Tokens
+
+Para poder intemcabiar tokens de manera programática, debemos interactuar con el contrato `UniswapV2Router02` de Uniswap. En este contrato inteligente, encontramos los siguientes métodos: `swapTokensForExactTokens` y `swapExactTokensForTokens`. Cada uno de estos métodos nos permite realizar intercambios entre tokens A y B.
+
+Cada uno de estos tokens realiza el intercambio de tokens pero de diferente manera. Veamos:
+
+*swapTokensForExactTokens*
+
+Cuando usas este método, defines una cantidad exacta de tokens a recibir. Supongamos que se desea entregar tokens A por tokens B. Es decir, sin importar cuantos tokens A necesites entregar, estás pidiendo un monto fijo de tokens B a recibir.
+
+```solidity
+function swapTokensForExactTokens(
+        uint amountOut,
+        uint amountInMax,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external returns (uint[] memory amounts);
+```
+
+En dicho caso, `amountOut` define la cantidad exacta de tokens B que deseas recibir. `amountInMax` define la cantidad máxima de tokens A que estarías dispuesto a renunciar para recibir la cantidad exacta de tokens B. 
+
+La siguiente gráfica explica este caso:
+
+![image-20221222154758712](https://user-images.githubusercontent.com/3300958/209393411-a3723107-7250-43d4-a5d9-dfa7a2092d75.png)
+
+En este caso, le estoy pidiendo a UNISWAP que me entregue exactamente 25 tokens B. Uniswap se encargará de decirme cuántos tokens A se necesitan.
+
+Descripción de los argumentos del método:
+
+| Name        | Type                 | Description                                                  |
+| ----------- | -------------------- | ------------------------------------------------------------ |
+| amountOut   | `uint`               | The amount of output tokens to receive.                      |
+| amountInMax | `uint`               | The maximum amount of input tokens that can be required before the transaction reverts. |
+| path        | `address[] calldata` | An array of token addresses. `path.length` must be >= 2. Pools for each consecutive pair of addresses must exist and have liquidity. |
+| to          | `address`            | Recipient of the output tokens.                              |
+| deadline    | `uint`               | Unix timestamp after which the transaction will revert.      |
+|             |                      |                                                              |
+| amounts     | `uint[] memory`      | The input token amount and all subsequent output token amounts. |
+
+*swapExactTokensForTokens*
+
+Cuando usas este método, defines una cantidad exacta de tokens a entregar. Supongamos que se desea entregar tokens A por tokens B. Es decir, sin importar cuantos tokens B necesites recibir, estás entregando una cantidad exacta de tokens A.
+
+```solidity
+function swapExactTokensForTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external returns (uint[] memory amounts);
+```
+
+En dicho caso, `amountIn` define la cantidad exacta de tokens A que deseas entregar. `amountOutMin` define la cantidad mínima de tokens B que estarías dispuesto a recibir como resultado de entregar una cantidad exacta de tokens A.
+
+La siguiente gráfica explica este caso:
+
+![image-20221222155047095](https://user-images.githubusercontent.com/3300958/209393409-5628e33c-bd9f-4dad-8020-1b7a488b7301.png)
+
+En este caso, le estoy pidiendo a UNISWAP que entregaré exactamente 10 tokens A. Uniswap se encargará de decirme cuántos tokens B voy a recibir como parte del intercambio.
+
+Descripción de los argumentos del método:
+
+| Name         | Type                 | Description                                                  |
+| ------------ | -------------------- | ------------------------------------------------------------ |
+| amountIn     | `uint`               | The amount of input tokens to send.                          |
+| amountOutMin | `uint`               | The minimum amount of output tokens that must be received for the transaction not to revert. |
+| path         | `address[] calldata` | An array of token addresses. `path.length` must be >= 2. Pools for each consecutive pair of addresses must exist and have liquidity. |
+| to           | `address`            | Recipient of the output tokens.                              |
+| deadline     | `uint`               | Unix timestamp after which the transaction will revert.      |
+|              |                      |                                                              |
+| amounts      | `uint[] memory`      | The input token amount and all subsequent output token amounts. |
+
+Vamos a crear un contrato Swapper que nos permitirá comunicarnos con el router `IUniswapV2Router02` de UNISWAP para poder realizar el intercambiode tokens A por tokens B. En este contrato, definiremos los dos métodos descritos arriba para realizar intercambios: `swapTokensForExactTokens` y `swapExactTokensForTokens`.
+
+Contrato Swapper:
+
+```solidity
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.9;
+
+interface IUniswapV2Router02 {
+    function swapTokensForExactTokens(
+        uint amountOut,
+        uint amountInMax,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external returns (uint[] memory amounts);
+
+    function swapExactTokensForTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external returns (uint[] memory amounts);
+}
+
+// Goerli: 0xE65D464aC7D3C195e18413EbEA7f7a989449Aa83
+contract Swapper {
+    // Router Goerli
+    address routerAddress = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
+    IUniswapV2Router02 router = IUniswapV2Router02(routerAddress);
+
+    event SwapAmounts(uint[] amounts);
+
+    function swapTokensForExactTokens(
+        uint amountOut,
+        uint amountInMax,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external {
+        address tokenAAdd = path[0];
+        IERC20(tokenAAdd).approve(routerAddress, amountInMax);
+
+        uint[] memory amounts = router.swapTokensForExactTokens(
+            amountOut,
+            amountInMax,
+            path,
+            to,
+            deadline
+        );
+
+        emit SwapAmounts(amounts);
+    }
+
+    function swapExactTokensForTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external {
+        address tokenAAdd = path[0];
+        IERC20(tokenAAdd).approve(routerAddress, amountIn);
+
+        uint[] memory amounts = router.swapExactTokensForTokens(
+            amountIn,
+            amountOutMin,
+            path,
+            to,
+            deadline
+        );
+
+        emit SwapAmounts(amounts);
+    }
+}
+```
+
+Del mismo modo, vamos a definir el script que nos permitirá realizar el intercambio de tokens usando el primer método `swapTokensForExactTokens`.
+
+```javascript
+async function swapTokensForExact() {
+  var tokenAAdd = "0x52A525D4c44b0E0491c14CA7Ff5A45a3884c15B3";
+  var TokenA = await hre.ethers.getContractFactory("TokenA");
+  var tokenA = TokenA.attach(tokenAAdd);
+
+  var tokenBAdd = "0x89EC644A1224eC1595952D6f0b90c041A46a0765";
+  var TokenB = await hre.ethers.getContractFactory("TokenB");
+  var tokenB = TokenB.attach(tokenBAdd);
+
+  var swapperAdd = "0xE65D464aC7D3C195e18413EbEA7f7a989449Aa83";
+  var Swapper = await hre.ethers.getContractFactory("Swapper");
+  var swapper = Swapper.attach(swapperAdd);
+
+  // Enviaremos al contrato Swapper 100 tokens A
+  // El contrato Swapper no tiene tokens B
+  // El ratio de tokens A a tokens B es 10:25
+  // Vamos a solicitar la cantidad exacta de 100 tokens B
+  // No sabemos cuantos tokens A necesitamos para obtener 100 tokens B
+  // Atravès del liquidity pool, se intercambirá los tokens A por tokens B
+
+  // Enviar tokens A al contrato Swapper
+  var tx = await tokenA.mint(swapperAdd, pEth("100"));
+  await tx.wait();
+
+  var amountOut = pEth("100"); // 100 tokens B
+  var amountInMax = pEth("45"); // Aprox, estoy dispuesto a entregar 45 tokens A
+  var path = [tokenAAdd, tokenBAdd];
+  var to = swapperAdd;
+  var deadline = new Date().getTime();
+
+  var tx = await swapper.swapTokensForExactTokens(
+    amountOut,
+    amountInMax,
+    path,
+    to,
+    deadline
+  );
+
+  var res = await tx.wait();
+  console.log("Transaction Hash", res.transactionHash);
+
+  console.log("Token A Bal: ", (await tokenA.balanceOf(swapperAdd)).toString());
+  console.log("Token B Bal: ", (await tokenB.balanceOf(swapperAdd)).toString());
+}
+```
+
+Al ejecutar el script, obtenemos el siguiente resultado:
+
+```
+Transaction Hash 0xb03df3ff166cca10715b2f5d69a140e47ade6fd1c926f3b95fc9785d259f1695
+Token A Bal:  58207957204948177866
+Token B Bal:  100000000000000000000
+```
+
+En la [transacción](https://goerli.etherscan.io/tx/0xb03df3ff166cca10715b2f5d69a140e47ade6fd1c926f3b95fc9785d259f1695), podemos ver que el monto de tokens B obtenidos, es exactamente 100.
+
+![image-20221222162623263](https://user-images.githubusercontent.com/3300958/209393407-22971059-71ff-4365-b04a-a7475bc9dd20.png)
+
+Ahora vamos a definir el script que nos permitirá pasar una cantidad exacta de tokens A a entregar, sin saber la cantidad de tokens B a recibir. Es decir, usaremos el otro método de intercambio llamado `swapExactTokensForTokens`:
+
+```javascript
+async function swapExactTokens() {
+  var tokenAAdd = "0x52A525D4c44b0E0491c14CA7Ff5A45a3884c15B3";
+  var TokenA = await hre.ethers.getContractFactory("TokenA");
+  var tokenA = TokenA.attach(tokenAAdd);
+
+  var tokenBAdd = "0x89EC644A1224eC1595952D6f0b90c041A46a0765";
+  var TokenB = await hre.ethers.getContractFactory("TokenB");
+  var tokenB = TokenB.attach(tokenBAdd);
+
+  var swapperAdd = "0xE65D464aC7D3C195e18413EbEA7f7a989449Aa83";
+  var Swapper = await hre.ethers.getContractFactory("Swapper");
+  var swapper = Swapper.attach(swapperAdd);
+
+  // El contrato Swapper tiene los siguientes balances de tokens
+  // Token A Bal:  58207957204948177866
+  // Token B Bal:  100000000000000000000
+  // El ratio de tokens A a tokens B es 10:25
+  // Vamos a enviar a cambiar la cantidad exacta de 100 tokens B
+  // No sabemos cuantos tokens A vamos
+  // Atravès del liquidity pool, se intercambirá los tokens B por tokens A
+
+  var amountIn = pEth("100"); // Envio exactamente 100 tokens B
+  var amountOutMin = pEth("35"); // Aprox, recibiré al menos 35 tokens A
+  var path = [tokenBAdd, tokenAAdd];
+  var to = swapperAdd;
+  var deadline = new Date().getTime();
+
+  var tx = await swapper.swapExactTokensForTokens(
+    amountIn,
+    amountOutMin,
+    path,
+    to,
+    deadline
+  );
+
+  var res = await tx.wait();
+  console.log("Transaction Hash", res.transactionHash);
+
+  console.log("Token A Bal: ", (await tokenA.balanceOf(swapperAdd)).toString());
+  console.log("Token B Bal: ", (await tokenB.balanceOf(swapperAdd)).toString());
+}
+```
+
+Al ejecutar el script, obtenemos el siguiente resultado:
+
+```
+Transaction Hash 0x78f43f0b74826902fec65ffda5072f73cfd96fe42ee9627348226cbcd6530200
+Token A Bal:  99759610069958645788
+Token B Bal:  0
+```
+
+En la [transacción](https://goerli.etherscan.io/tx/0x78f43f0b74826902fec65ffda5072f73cfd96fe42ee9627348226cbcd6530200), podemos ver que el monto de tokens B que fueron entregados es exactamente 100.
+
+![image-20221222164441599](https://user-images.githubusercontent.com/3300958/209393404-9a4d8c47-27f7-4112-b735-dbd5ebe34175.png)
+
